@@ -254,6 +254,13 @@ Both applications follow a clean, modular architecture with separation of concer
 
 ### Recent Improvements
 
+**v2.0.3:**
+- ✅ Fixed per-image tile selection persistence
+- ✅ Each image now maintains independent tile selections
+- ✅ Export functions now process all images with their respective selections
+- ✅ Classification mode exports unselected tiles to `no_<folder>` directory
+- ✅ Added support for `.tif` file extension
+
 **v2.0.2:**
 - ✅ Added drag & drop support for images and folders (both tools)
 - ✅ Visual feedback when dragging files over canvas
@@ -309,7 +316,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 2.0.2  <br>
+**Version:** 2.0.3  <br>
 **Last Updated:** October 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 

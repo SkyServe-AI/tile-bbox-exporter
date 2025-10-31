@@ -46,11 +46,11 @@ class CanvasHandler:
             if i in self.app.selected_tiles:
                 self.app.canvas.create_rectangle(x, y, x2, y2, outline="#00ff00", width=3, tags=f"tile_{i}")
                 # Add semi-transparent overlay
-                self.app.canvas.create_rectangle(x, y, x2, y2, fill="#00ff00", stipple="gray50", tags=f"tile_{i}")
+                self.app.canvas.create_rectangle(x, y, x2, y2, stipple="gray50", tags=f"tile_{i}")
                 # Add checkmark
                 center_x = (x + x2) // 2
                 center_y = (y + y2) // 2
-                self.app.canvas.create_text(center_x, center_y, text="✓", fill="#00ff00", 
+                self.app.canvas.create_text(center_x, center_y, text="✓",  
                                            font=('Arial', int(20 * self.app.zoom_level), 'bold'), tags=f"tile_{i}")
         
         # Update scroll region

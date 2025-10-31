@@ -60,6 +60,9 @@ class ImageTileSelector:
         self.current_padded_image = None
         self.display_image_tk = None
         
+        # Per-image tile selections storage
+        self.image_tile_selections = {}  # {image_path: set of selected tile indices}
+        
         # Zoom settings
         self.zoom_level = 1.0
         self.min_zoom = 0.1

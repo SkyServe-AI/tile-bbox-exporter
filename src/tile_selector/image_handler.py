@@ -24,17 +24,18 @@ class ImageHandler:
     def is_image_file(self, filepath):
         """Check if file is a supported image format"""
         ext = os.path.splitext(filepath)[1].lower()
-        return ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.gif']
+        return ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff', '.gif']
     
     def upload_images(self):
         """Upload multiple image files"""
         filetypes = [
-            ('Image files', '*.png *.jpg *.jpeg *.bmp *.tiff *.gif'),
+            ('Image files', '*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.gif'),
             ('All files', '*.*')
         ]
         filepaths = filedialog.askopenfilenames(title="Select Images", filetypes=filetypes)
         if filepaths:
             self.app.images = []
+            self.app.image_tile_selections = {}  # Clear previous selections
             for filepath in filepaths:
                 try:
                     img = Image.open(filepath)
@@ -52,6 +53,7 @@ class ImageHandler:
         folder = filedialog.askdirectory(title="Select Folder")
         if folder:
             self.app.images = []
+            self.app.image_tile_selections = {}  # Clear previous selections
             for file in os.listdir(folder):
                 path = os.path.join(folder, file)
                 if os.path.isfile(path) and self.is_image_file(path):
@@ -87,6 +89,11 @@ class ImageHandler:
         """Handle image selection from listbox"""
         selection = self.app.image_listbox.curselection()
         if selection:
+            # Save current image's selections before switching
+            if self.app.images and self.app.current_image_index < len(self.app.images):
+                current_image_path = self.app.images[self.app.current_image_index][0]
+                self.app.image_tile_selections[current_image_path] = self.app.selected_tiles.copy()
+            
             self.app.current_image_index = selection[0]
             self.app.image_counter_label.config(
                 text=f"{self.app.current_image_index + 1} / {len(self.app.images)}")
@@ -96,6 +103,11 @@ class ImageHandler:
         """Show previous image"""
         if not self.app.images:
             return
+        
+        # Save current image's selections before switching
+        current_image_path = self.app.images[self.app.current_image_index][0]
+        self.app.image_tile_selections[current_image_path] = self.app.selected_tiles.copy()
+        
         self.app.current_image_index = (self.app.current_image_index - 1) % len(self.app.images)
         self.app.image_listbox.selection_clear(0, tk.END)
         self.app.image_listbox.selection_set(self.app.current_image_index)
@@ -108,6 +120,11 @@ class ImageHandler:
         """Show next image"""
         if not self.app.images:
             return
+        
+        # Save current image's selections before switching
+        current_image_path = self.app.images[self.app.current_image_index][0]
+        self.app.image_tile_selections[current_image_path] = self.app.selected_tiles.copy()
+        
         self.app.current_image_index = (self.app.current_image_index + 1) % len(self.app.images)
         self.app.image_listbox.selection_clear(0, tk.END)
         self.app.image_listbox.selection_set(self.app.current_image_index)
@@ -160,6 +177,7 @@ class ImageHandler:
         
         # Process dropped items
         self.app.images = []
+        self.app.image_tile_selections = {}  # Clear previous selections
         
         for item in files:
             if os.path.isfile(item):

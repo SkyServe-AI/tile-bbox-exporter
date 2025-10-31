@@ -23,12 +23,12 @@ class ImageHandler:
     def is_image_file(self, filepath):
         """Check if file is a supported image format"""
         ext = os.path.splitext(filepath)[1].lower()
-        return ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.gif']
+        return ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff', '.gif']
     
     def load_image(self):
         """Load a single image file"""
         filetypes = [
-            ('Image files', '*.png *.jpg *.jpeg *.bmp *.tiff *.gif'),
+            ('Image files', '*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.gif'),
             ('All files', '*.*')
         ]
         filepath = filedialog.askopenfilename(title="Select Image", filetypes=filetypes)

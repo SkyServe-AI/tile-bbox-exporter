@@ -53,8 +53,8 @@ class TileManager:
         # Store for display
         self.app.current_padded_image = padded_image
         
-        # Preserve existing selections
-        old_selected = self.app.selected_tiles.copy() if hasattr(self.app, 'selected_tiles') else set()
+        # Load saved selections for this image, or start with empty set
+        saved_selections = self.app.image_tile_selections.get(current_image_path, set())
         
         self.app.tiles = []
         self.app.selected_tiles = set()
@@ -68,8 +68,8 @@ class TileManager:
                 y = row * tile_size
                 tile_img = padded_image.crop((x, y, x + tile_size, y + tile_size))
                 
-                # Check if this tile was previously selected
-                is_selected = tile_index in old_selected
+                # Check if this tile was previously selected for THIS image
+                is_selected = tile_index in saved_selections
                 if is_selected:
                     self.app.selected_tiles.add(tile_index)
                 
@@ -87,33 +87,77 @@ class TileManager:
         self.app.display_grid()
     
     def export_tiles(self):
-        """Export all tiles"""
-        if not self.app.tiles:
-            messagebox.showwarning("Warning", "No tiles to export.")
+        """Export all selected tiles from all images"""
+        if not self.app.images:
+            messagebox.showwarning("Warning", "No images loaded.")
             return
+        
+        # Save current image's selections
+        if self.app.current_image_index < len(self.app.images):
+            current_image_path = self.app.images[self.app.current_image_index][0]
+            self.app.image_tile_selections[current_image_path] = self.app.selected_tiles.copy()
         
         folder = filedialog.askdirectory(title="Select Export Folder")
         if not folder:
             return
         
         exported = 0
-        for i, tile in enumerate(self.app.tiles):
-            filename = f"{tile['image_name']}_tile_{tile['row']}_{tile['col']}.png"
-            path = os.path.join(folder, filename)
-            try:
-                tile['tile_img'].save(path)
-                exported += 1
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+        total_selected = 0
         
-        messagebox.showinfo("Export Complete", f"Exported {exported} tiles to {folder}.")
-        self.app.update_status(f"Exported {exported} tiles successfully")
+        # Process each image
+        for img_path, img in self.app.images:
+            # Get selected tiles for this image
+            selected_tiles = self.app.image_tile_selections.get(img_path, set())
+            if not selected_tiles:
+                continue
+            
+            total_selected += len(selected_tiles)
+            
+            # Generate tiles for this image
+            img_width, img_height = img.size
+            tiles_x = math.ceil(img_width / self.app.tile_size)
+            tiles_y = math.ceil(img_height / self.app.tile_size)
+            padded_width = tiles_x * self.app.tile_size
+            padded_height = tiles_y * self.app.tile_size
+            
+            padded_image = Image.new('RGB', (padded_width, padded_height), (0, 0, 0))
+            padded_image.paste(img, (0, 0))
+            
+            image_name = os.path.splitext(os.path.basename(img_path))[0]
+            tile_index = 0
+            
+            for row in range(tiles_y):
+                for col in range(tiles_x):
+                    if tile_index in selected_tiles:
+                        x = col * self.app.tile_size
+                        y = row * self.app.tile_size
+                        tile_img = padded_image.crop((x, y, x + self.app.tile_size, y + self.app.tile_size))
+                        
+                        filename = f"{image_name}_tile_{row}_{col}.png"
+                        path = os.path.join(folder, filename)
+                        try:
+                            tile_img.save(path)
+                            exported += 1
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+                    tile_index += 1
+        
+        if exported == 0:
+            messagebox.showwarning("Warning", "No tiles selected for export.")
+        else:
+            messagebox.showinfo("Export Complete", f"Exported {exported} selected tiles to {folder}.")
+            self.app.update_status(f"Exported {exported} tiles successfully")
     
     def export_classification(self):
         """Export tiles in classification mode: selected to folder, unselected to no_<folder>"""
-        if not self.app.selected_tiles and len(self.app.selected_tiles) == len(self.app.tiles):
-            messagebox.showwarning("Warning", "Please select some tiles for classification.")
+        if not self.app.images:
+            messagebox.showwarning("Warning", "No images loaded.")
             return
+        
+        # Save current image's selections
+        if self.app.current_image_index < len(self.app.images):
+            current_image_path = self.app.images[self.app.current_image_index][0]
+            self.app.image_tile_selections[current_image_path] = self.app.selected_tiles.copy()
         
         folder = filedialog.askdirectory(title="Select Export Folder for Selected Tiles")
         if not folder:
@@ -131,25 +175,50 @@ class TileManager:
         exported_selected = 0
         exported_unselected = 0
         
-        for i, tile in enumerate(self.app.tiles):
-            filename = f"{tile['image_name']}_tile_{tile['row']}_{tile['col']}.png"
+        # Process each image
+        for img_path, img in self.app.images:
+            # Get selected tiles for this image
+            selected_tiles = self.app.image_tile_selections.get(img_path, set())
             
-            if i in self.app.selected_tiles:
-                # Export to selected folder
-                path = os.path.join(folder, filename)
-                try:
-                    tile['tile_img'].save(path)
-                    exported_selected += 1
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to save {filename}: {e}")
-            else:
-                # Export to unselected folder
-                path = os.path.join(no_folder, filename)
-                try:
-                    tile['tile_img'].save(path)
-                    exported_unselected += 1
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+            # Generate tiles for this image
+            img_width, img_height = img.size
+            tiles_x = math.ceil(img_width / self.app.tile_size)
+            tiles_y = math.ceil(img_height / self.app.tile_size)
+            padded_width = tiles_x * self.app.tile_size
+            padded_height = tiles_y * self.app.tile_size
+            
+            padded_image = Image.new('RGB', (padded_width, padded_height), (0, 0, 0))
+            padded_image.paste(img, (0, 0))
+            
+            image_name = os.path.splitext(os.path.basename(img_path))[0]
+            tile_index = 0
+            
+            for row in range(tiles_y):
+                for col in range(tiles_x):
+                    x = col * self.app.tile_size
+                    y = row * self.app.tile_size
+                    tile_img = padded_image.crop((x, y, x + self.app.tile_size, y + self.app.tile_size))
+                    
+                    filename = f"{image_name}_tile_{row}_{col}.png"
+                    
+                    if tile_index in selected_tiles:
+                        # Export to selected folder
+                        path = os.path.join(folder, filename)
+                        try:
+                            tile_img.save(path)
+                            exported_selected += 1
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+                    else:
+                        # Export to unselected folder
+                        path = os.path.join(no_folder, filename)
+                        try:
+                            tile_img.save(path)
+                            exported_unselected += 1
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+                    
+                    tile_index += 1
         
         messagebox.showinfo("Classification Export Complete", 
                           f"Exported {exported_selected} selected tiles to:\n{folder}\n\n"
