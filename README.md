@@ -137,7 +137,7 @@ python run_bbox_selector.py
 ## Project Structure
 
 ```
-image-tile-selector/
+tile-bbox-exporter/
 ├── src/
 │   ├── __init__.py
 │   ├── tile_selector/
