@@ -8,6 +8,7 @@ A professional desktop application for image annotation, tile selection, and obj
 - 📁 Load multiple images (PNG, JPG, JPEG, TIFF)
 - 🔲 Automatic tile grid generation with customizable size
 - ✅ Interactive tile selection/deselection
+- 🖱️ Drag selection for multiple tiles (free-style painting)
 - 🎯 Classification mode for labeled exports
 - 💾 Export selected tiles as individual images
 - 🔍 Zoom and pan controls
@@ -84,8 +85,10 @@ python run_bbox_selector.py
    - Click "Generate Tiles" to recreate grid
 
 3. **Select Tiles**
-   - Click on tiles to select/deselect (green = selected)
-   - Use "Select All" or "Deselect All" for bulk operations
+   - **Single Click**: Click on tiles to select/deselect (green = selected)
+   - **Drag Selection**: Click and drag across tiles for free-style multi-selection
+     - Drag over unselected tiles to select them
+     - Drag over selected tiles to deselect them
 
 4. **Export**
    - **Standard Mode**: Click "💾 Export Selected Tiles"
@@ -142,10 +145,19 @@ tile-bbox-exporter/
 │   ├── __init__.py
 │   ├── tile_selector/
 │   │   ├── __init__.py
-│   │   └── app.py              # Image Tile Selector main class
+│   │   ├── app.py              # Main application entry point
+│   │   ├── ui_components.py    # GUI setup and styling
+│   │   ├── image_handler.py    # Image loading and navigation
+│   │   ├── tile_manager.py     # Tile generation and export
+│   │   └── canvas_handler.py   # Canvas display and zoom
 │   └── bbox_selector/
 │       ├── __init__.py
-│       └── app.py              # BBox Selector main class
+│       ├── app.py              # Main application entry point
+│       ├── ui_components.py    # GUI setup and styling
+│       ├── image_handler.py    # Image loading and navigation
+│       ├── shape_manager.py    # BBox/polygon operations
+│       ├── canvas_handler.py   # Canvas display and zoom
+│       └── mouse_handler.py    # Mouse event handling
 ├── run_tile_selector.py        # Entry point for Tile Selector
 ├── run_bbox_selector.py        # Entry point for BBox Selector
 ├── requirements.txt            # Python dependencies
@@ -213,6 +225,43 @@ sudo dnf install python3-tkinter
 ### Issue: Keyboard shortcuts not working
 **Solution:** Click on the canvas to give it focus
 
+## Architecture
+
+### Modular Design
+
+Both applications follow a clean, modular architecture with separation of concerns:
+
+**Design Principles:**
+- **Single Responsibility**: Each module handles one specific aspect
+- **Separation of Concerns**: UI, business logic, and event handling are separated
+- **Maintainability**: Small, focused files (~150-300 lines each)
+- **Testability**: Easy to unit test individual components
+- **Scalability**: Simple to add new features without affecting existing code
+
+**Module Responsibilities:**
+
+| Module | Purpose |
+|--------|---------|
+| `app.py` | Application initialization and coordination |
+| `ui_components.py` | GUI layout, buttons, and styling |
+| `image_handler.py` | Image loading, navigation, and management |
+| `shape_manager.py` / `tile_manager.py` | Business logic for annotations/tiles |
+| `canvas_handler.py` | Canvas rendering, zoom, and display |
+| `mouse_handler.py` | Mouse events and user interactions (BBox only) |
+
+### Recent Improvements
+
+**v2.0.1:**
+- ✅ Added drag selection for tiles (free-style painting)
+- ✅ Smart selection mode (add/remove based on first tile)
+
+**v2.0.0 Refactor:**
+- ✅ Modularized monolithic codebase (1200+ lines → 6 modules)
+- ✅ Responsive UI for 13"+ displays
+- ✅ Fixed tile selection with position-based detection
+- ✅ Fixed zoom centering to maintain viewport
+- ✅ Improved code organization and maintainability
+
 ## Development
 
 ### Running Tests
@@ -225,6 +274,7 @@ python -m pytest tests/
 - Follow PEP 8 guidelines
 - Use meaningful variable names
 - Add docstrings to functions
+- Keep modules focused and under 300 lines
 
 ## Contributing
 
@@ -250,7 +300,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 1.0.0  <br>
+**Version:** 2.0.1  <br>
 **Last Updated:** October 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 
