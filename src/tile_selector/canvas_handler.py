@@ -134,29 +134,70 @@ class CanvasHandler:
         self.app.canvas.scan_dragto(event.x, event.y, gain=1)
     
     def on_canvas_click(self, event):
-        """Handle canvas click to select/deselect tiles"""
+        """Handle canvas click to start tile selection"""
         x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
         
-        # Calculate which tile was clicked based on position
+        # Start drag selection
+        self.app.is_selecting = True
+        
+        # Find the tile at click position
+        tile_index = self._get_tile_at_position(x, y)
+        
+        if tile_index is not None:
+            # Determine selection mode based on current state of clicked tile
+            if tile_index in self.app.selected_tiles:
+                self.app.selection_mode = 'remove'
+                self.app.selected_tiles.remove(tile_index)
+                self.app.tiles[tile_index]['selected'] = False
+            else:
+                self.app.selection_mode = 'add'
+                self.app.selected_tiles.add(tile_index)
+                self.app.tiles[tile_index]['selected'] = True
+            
+            self.display_grid()
+            self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+    
+    def on_canvas_drag(self, event):
+        """Handle canvas drag to select multiple tiles"""
+        if not self.app.is_selecting or self.app.selection_mode is None:
+            return
+        
+        x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
+        
+        # Find the tile at current position
+        tile_index = self._get_tile_at_position(x, y)
+        
+        if tile_index is not None:
+            # Apply selection mode to this tile
+            if self.app.selection_mode == 'add':
+                if tile_index not in self.app.selected_tiles:
+                    self.app.selected_tiles.add(tile_index)
+                    self.app.tiles[tile_index]['selected'] = True
+                    self.display_grid()
+                    self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+            elif self.app.selection_mode == 'remove':
+                if tile_index in self.app.selected_tiles:
+                    self.app.selected_tiles.remove(tile_index)
+                    self.app.tiles[tile_index]['selected'] = False
+                    self.display_grid()
+                    self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+    
+    def on_canvas_release(self, event):
+        """Handle mouse button release to end selection"""
+        self.app.is_selecting = False
+        self.app.selection_mode = None
+    
+    def _get_tile_at_position(self, x, y):
+        """Get tile index at given canvas position"""
         tile_size_zoomed = int(self.app.tile_size * self.app.zoom_level)
         
-        # Find the tile by calculating grid position
         for i, tile in enumerate(self.app.tiles):
             tile_x = int(tile['x'] * self.app.zoom_level)
             tile_y = int(tile['y'] * self.app.zoom_level)
             tile_x2 = tile_x + tile_size_zoomed
             tile_y2 = tile_y + tile_size_zoomed
             
-            # Check if click is within this tile's bounds
             if tile_x <= x <= tile_x2 and tile_y <= y <= tile_y2:
-                # Toggle selection
-                if i in self.app.selected_tiles:
-                    self.app.selected_tiles.remove(i)
-                    self.app.tiles[i]['selected'] = False
-                else:
-                    self.app.selected_tiles.add(i)
-                    self.app.tiles[i]['selected'] = True
-                
-                self.display_grid()
-                self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
-                return  # Exit after handling the clicked tile
+                return i
+        
+        return None

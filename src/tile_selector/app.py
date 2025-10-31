@@ -71,6 +71,10 @@ class ImageTileSelector:
         self.drag_start_x = 0
         self.drag_start_y = 0
         
+        # Tile selection drag state
+        self.is_selecting = False
+        self.selection_mode = None  # 'add' or 'remove'
+        
         # UI elements (will be set by UIComponents)
         self.canvas = None
         self.zoom_label = None
@@ -92,6 +96,8 @@ class ImageTileSelector:
     def _bind_events(self):
         """Bind canvas events"""
         self.canvas.bind("<Button-1>", self.canvas_handler.on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self.canvas_handler.on_canvas_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.canvas_handler.on_canvas_release)
         self.canvas.bind("<MouseWheel>", self.canvas_handler.on_mouse_wheel)
         self.canvas.bind("<Control-MouseWheel>", self.canvas_handler.on_ctrl_mouse_wheel)
         self.canvas.bind("<Shift-MouseWheel>", self.canvas_handler.on_shift_mouse_wheel)

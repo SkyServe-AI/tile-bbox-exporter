@@ -8,6 +8,7 @@ A professional desktop application for image annotation, tile selection, and obj
 - 📁 Load multiple images (PNG, JPG, JPEG, TIFF)
 - 🔲 Automatic tile grid generation with customizable size
 - ✅ Interactive tile selection/deselection
+- 🖱️ Drag selection for multiple tiles (free-style painting)
 - 🎯 Classification mode for labeled exports
 - 💾 Export selected tiles as individual images
 - 🔍 Zoom and pan controls
@@ -84,8 +85,10 @@ python run_bbox_selector.py
    - Click "Generate Tiles" to recreate grid
 
 3. **Select Tiles**
-   - Click on tiles to select/deselect (green = selected)
-   - Use "Select All" or "Deselect All" for bulk operations
+   - **Single Click**: Click on tiles to select/deselect (green = selected)
+   - **Drag Selection**: Click and drag across tiles for free-style multi-selection
+     - Drag over unselected tiles to select them
+     - Drag over selected tiles to deselect them
 
 4. **Export**
    - **Standard Mode**: Click "💾 Export Selected Tiles"
@@ -248,6 +251,10 @@ Both applications follow a clean, modular architecture with separation of concer
 
 ### Recent Improvements
 
+**v2.0.1:**
+- ✅ Added drag selection for tiles (free-style painting)
+- ✅ Smart selection mode (add/remove based on first tile)
+
 **v2.0.0 Refactor:**
 - ✅ Modularized monolithic codebase (1200+ lines → 6 modules)
 - ✅ Responsive UI for 13"+ displays
@@ -293,7 +300,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 2.0.0  <br>
+**Version:** 2.0.1  <br>
 **Last Updated:** October 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 
