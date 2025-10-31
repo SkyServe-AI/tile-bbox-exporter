@@ -32,6 +32,9 @@ class BBoxSelector:
         
         # Bind mouse events
         self.mouse_handler.bind_events()
+        
+        # Enable drag and drop after canvas is created
+        self.image_handler.enable_drag_drop()
     
     def _init_responsive_sizing(self):
         """Initialize responsive window sizing and fonts"""

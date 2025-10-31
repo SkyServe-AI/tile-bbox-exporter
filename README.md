@@ -6,6 +6,7 @@ A professional desktop application for image annotation, tile selection, and obj
 
 ### Image Tile Selector
 - 📁 Load multiple images (PNG, JPG, JPEG, TIFF)
+- 🎯 Drag & drop images or folders directly onto canvas
 - 🔲 Automatic tile grid generation with customizable size
 - ✅ Interactive tile selection/deselection
 - 🖱️ Drag selection for multiple tiles (free-style painting)
@@ -15,6 +16,8 @@ A professional desktop application for image annotation, tile selection, and obj
 - 📊 Real-time selection statistics
 
 ### BBox Selector & Polygon Annotator
+- 📁 Load single or multiple images
+- 🎯 Drag & drop images or folders directly onto canvas
 - 📦 Create rectangular bounding boxes
 - 🔺 Draw custom polygon selections
 - ✏️ Resize bboxes with drag handles
@@ -251,6 +254,12 @@ Both applications follow a clean, modular architecture with separation of concer
 
 ### Recent Improvements
 
+**v2.0.2:**
+- ✅ Added drag & drop support for images and folders (both tools)
+- ✅ Visual feedback when dragging files over canvas
+- ✅ Automatic file type detection and filtering
+- ✅ Graceful degradation if tkinterdnd2 not installed
+
 **v2.0.1:**
 - ✅ Added drag selection for tiles (free-style painting)
 - ✅ Smart selection mode (add/remove based on first tile)
@@ -300,7 +309,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 2.0.1  <br>
+**Version:** 2.0.2  <br>
 **Last Updated:** October 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 

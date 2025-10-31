@@ -43,6 +43,9 @@ class ImageTileSelector:
         
         # Bind events
         self._bind_events()
+        
+        # Enable drag and drop after canvas is created
+        self.image_handler.enable_drag_drop()
     
     def _init_variables(self):
         """Initialize all application variables"""
