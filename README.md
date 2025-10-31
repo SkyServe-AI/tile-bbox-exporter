@@ -22,6 +22,13 @@ A professional desktop application for image annotation, tile selection, and obj
 - 💾 Export annotations as JSON + PNG images
 - ⌨️ Keyboard shortcuts for efficiency
 
+## Screenshots
+### Image Tile Selector
+![Image Tile Selector](assets/TileSelector.png)
+
+### Image BBox Selector
+![Image BBox Selector](assets/BBoxSelector.png)
+
 ## Installation
 
 ### Prerequisites
