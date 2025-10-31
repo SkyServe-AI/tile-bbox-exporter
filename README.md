@@ -27,7 +27,7 @@ A professional desktop application for image annotation, tile selection, and obj
 ![Image Tile Selector](assets/TileSelector.png)
 
 ### Image BBox Selector
-![Image BBox Selector](assets/BBoxSelector.png)
+![Image BBox Selector](assets/BboxSelector.png)
 
 ## Installation
 
