@@ -4,6 +4,9 @@
 # Image processing library
 Pillow>=10.0.0
 
+# Drag and drop support (optional but recommended)
+tkinterdnd2>=0.3.0
+
 # Note: tkinter is included with Python standard library
 # If tkinter is not available on your system:
 # - Windows: Included by default
