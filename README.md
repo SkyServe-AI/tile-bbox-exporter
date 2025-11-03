@@ -20,11 +20,15 @@ A professional desktop application for image annotation, tile selection, and obj
 - 🎯 Drag & drop images or folders directly onto canvas
 - 📦 Create rectangular bounding boxes
 - 🔺 Draw custom polygon selections
+- 🏷️ **Multi-class annotation system** with color-coded labels
+- 🎨 **Image augmentation** (rotation, flip, brightness, contrast, blur, noise, etc.)
+- 📤 **Export formats**: JSON, COCO, Pascal VOC, YOLO
 - ✏️ Resize bboxes with drag handles
 - 🎨 Visual feedback (hover, selection states)
 - 🗑️ Delete and clear operations
-- 💾 Export annotations as JSON + PNG images
+- 💾 Export annotations with augmentation support
 - ⌨️ Keyboard shortcuts for efficiency
+- 🔍 Preserve zoom/pan during annotation
 
 ## Screenshots
 ### Image Tile Selector
@@ -103,26 +107,52 @@ python run_bbox_selector.py
 ### BBox Selector Workflow
 
 1. **Load Image**
-   - Click "📁 Load Image" to select an image
+   - Click "📁 Load Image" or "📂 Load Folder" to select images
 
-2. **Create Bounding Boxes**
+2. **Select Class** (Multi-Class Annotation)
+   - Use class dropdown to select annotation class
+   - Click "⚙️ Manage Classes" to add/edit/delete classes
+   - Each class has a unique color for visual distinction
+
+3. **Create Bounding Boxes**
    - Set desired width/height in pixels
    - Click anywhere on image to create bbox
    - Click on bbox to select it (turns golden)
    - Drag corner/edge handles to resize
+   - Bboxes are color-coded by class
 
-3. **Create Polygons**
-   - Check "Custom Select" checkbox
+4. **Create Polygons**
+   - Check "✏️ Polygon Mode" checkbox
    - Click to add points (3+ required)
    - Press **Enter** or **Right-click** to complete
    - Press **Escape** to cancel
+   - Polygons are color-coded by class
 
-4. **Save Annotations**
-   - Click "💾 Save All Shapes"
+5. **Configure Augmentation** (Optional)
+   - Click "🎨 Augment" to open settings
+   - Enable desired augmentations:
+     - Rotation (90°, 180°, 270°)
+     - Horizontal/Vertical flip
+     - Brightness, Contrast, Blur
+     - Noise, Saturation, Sharpness
+   - See live count of augmented images per bbox
+   - Click "💾 Save Settings"
+
+6. **Select Export Format**
+   - Choose format from dropdown: JSON / COCO / VOC / YOLO
+   - **JSON**: Individual files per image
+   - **COCO**: Single annotations_coco.json
+   - **VOC**: XML files in Annotations/ folder
+   - **YOLO**: TXT files in labels/ folder + classes.txt
+
+7. **Save Annotations**
+   - Click "💾 Save All"
+   - Choose whether to apply augmentation
    - Choose output folder
    - Exports:
      - Individual PNG images for each shape
-     - JSON file with all coordinates
+     - Annotations in selected format
+     - Augmented versions if enabled
 
 ### Keyboard Shortcuts
 
@@ -160,7 +190,9 @@ tile-bbox-exporter/
 │       ├── image_handler.py    # Image loading and navigation
 │       ├── shape_manager.py    # BBox/polygon operations
 │       ├── canvas_handler.py   # Canvas display and zoom
-│       └── mouse_handler.py    # Mouse event handling
+│       ├── mouse_handler.py    # Mouse event handling
+│       ├── augmentation.py     # Image augmentation system
+│       └── export_formats.py   # COCO/VOC/YOLO exporters
 ├── run_tile_selector.py        # Entry point for Tile Selector
 ├── run_bbox_selector.py        # Entry point for BBox Selector
 ├── requirements.txt            # Python dependencies
@@ -170,9 +202,10 @@ tile-bbox-exporter/
 
 ```
 
-## JSON Export Format
+## Export Formats
 
-When using "Save All Shapes" in BBox Selector, a JSON file is created:
+### JSON Format
+Individual JSON file per image with bbox and polygon annotations:
 
 ```json
 {
@@ -185,16 +218,77 @@ When using "Save All Shapes" in BBox Selector, a JSON file is created:
       "x": 100,
       "y": 200,
       "width": 64,
-      "height": 64
+      "height": 64,
+      "class": "Class 1",
+      "class_color": "#00ff00"
     }
   ],
   "polygons": [
     {
       "id": 1,
-      "points": [[x1, y1], [x2, y2], [x3, y3], ...]
+      "points": [[x1, y1], [x2, y2], [x3, y3], ...],
+      "class": "Class 1",
+      "class_color": "#00ff00"
     }
   ]
 }
+```
+
+### COCO Format
+Single `annotations_coco.json` file compatible with Detectron2, MMDetection:
+
+```json
+{
+  "images": [{"id": 1, "file_name": "image.jpg", "width": 1920, "height": 1080}],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [100, 200, 64, 64],
+      "area": 4096,
+      "iscrowd": 0
+    }
+  ],
+  "categories": [{"id": 1, "name": "Class 1", "supercategory": "object"}]
+}
+```
+
+### Pascal VOC Format
+XML files in `Annotations/` folder, compatible with classic object detection models:
+
+```xml
+<annotation>
+  <filename>image.jpg</filename>
+  <size>
+    <width>1920</width>
+    <height>1080</height>
+  </size>
+  <object>
+    <name>Class 1</name>
+    <bndbox>
+      <xmin>100</xmin>
+      <ymin>200</ymin>
+      <xmax>164</xmax>
+      <ymax>264</ymax>
+    </bndbox>
+  </object>
+</annotation>
+```
+
+### YOLO Format
+TXT files in `labels/` folder + `classes.txt`, ready for YOLOv5/v8 training:
+
+```
+# Format: <class_id> <x_center> <y_center> <width> <height> (normalized 0-1)
+0 0.085417 0.212963 0.033333 0.059259
+```
+
+`classes.txt`:
+```
+Class 1
+Class 2
+Class 3
 ```
 
 ## Dependencies
@@ -253,6 +347,16 @@ Both applications follow a clean, modular architecture with separation of concer
 | `mouse_handler.py` | Mouse events and user interactions (BBox only) |
 
 ### Recent Improvements
+
+**v2.1.3:**
+- ✅ **Multi-class annotation system** with color-coded labels
+- ✅ **Image augmentation** for dataset expansion (rotation, flip, brightness, contrast, blur, noise, saturation, sharpness)
+- ✅ **Export format support**: COCO, Pascal VOC, YOLO (in addition to JSON)
+- ✅ Augmentation settings dialog with live preview count
+- ✅ Preserve zoom/pan position during annotation
+- ✅ Updated bbox coordinates for augmented images
+- ✅ Class management dialog (add/edit/delete classes)
+- ✅ Mouse wheel scrolling in augmentation dialog
 
 **v2.0.3:**
 - ✅ Fixed per-image tile selection persistence
@@ -316,7 +420,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 2.0.3  <br>
-**Last Updated:** October 2025 <br>
+**Version:** 2.1.3  <br>
+**Last Updated:** November 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 

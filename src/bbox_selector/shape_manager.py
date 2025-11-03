@@ -45,7 +45,7 @@ class ShapeManager:
         self.validate_bbox_size()
         self.app.selected_bbox['width'] = self.app.bbox_width
         self.app.selected_bbox['height'] = self.app.bbox_height
-        self.app.display_image_on_canvas()
+        self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
         self.app.update_status(f"Applied size {self.app.bbox_width}x{self.app.bbox_height} to bbox #{self.app.selected_bbox['id']}")
     
     def delete_selected_shape(self):
@@ -53,12 +53,12 @@ class ShapeManager:
         if self.app.selected_bbox:
             self.app.bboxes = [b for b in self.app.bboxes if b['id'] != self.app.selected_bbox['id']]
             self.app.selected_bbox = None
-            self.app.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"Deleted bbox | Remaining: {len(self.app.bboxes)} bboxes, {len(self.app.polygons)} polygons")
         elif self.app.selected_polygon:
             self.app.polygons = [p for p in self.app.polygons if p['id'] != self.app.selected_polygon['id']]
             self.app.selected_polygon = None
-            self.app.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"Deleted polygon | Remaining: {len(self.app.bboxes)} bboxes, {len(self.app.polygons)} polygons")
         else:
             messagebox.showwarning("Warning", "No shape selected to delete.")
@@ -77,7 +77,7 @@ class ShapeManager:
             self.app.polygons = []
             self.app.polygon_counter = 0
             self.app.selected_polygon = None
-            self.app.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"All shapes cleared | Image {self.app.current_image_index + 1}/{len(self.app.images)}: {os.path.basename(self.app.image_path) if self.app.image_path else 'No image'}")
     
     def export_bboxes(self):
@@ -112,7 +112,7 @@ class ShapeManager:
         self.app.update_status(f"Exported {exported} bboxes successfully")
     
     def save_all_shapes(self):
-        """Save all shapes (bboxes and polygons) from all images as images and JSON"""
+        """Save all shapes (bboxes and polygons) from all images as images and JSON with augmentation"""
         # Save current image annotations first
         self.save_current_annotations()
         
@@ -126,12 +126,29 @@ class ShapeManager:
             messagebox.showwarning("Warning", "No shapes to save across all images.")
             return
         
+        # Ask if user wants to apply augmentation
+        augment_count = self.app.augmentor.get_augmentation_count()
+        if augment_count > 1:
+            result = messagebox.askyesno("Apply Augmentation?", 
+                                        f"Apply augmentation during export?\n\n"
+                                        f"Each bbox will generate {augment_count}x images.\n"
+                                        f"(Configure in 🎨 Augment settings)")
+            apply_augmentation = result
+        else:
+            apply_augmentation = False
+        
         folder = filedialog.askdirectory(title="Select Save Folder")
         if not folder:
             return
         
+        # Get export format
+        export_format = self.app.export_format.get()
+        
         total_bboxes = 0
         total_polygons = 0
+        
+        # Prepare data for format exporters
+        images_data = {}
         
         # Process each image with annotations
         for image_path, annotations in self.app.image_annotations.items():
@@ -161,20 +178,59 @@ class ShapeManager:
             
             # Export bboxes
             for bbox in bboxes:
-                json_data["bboxes"].append({
-                    "id": bbox['id'],
-                    "x": bbox['x'],
-                    "y": bbox['y'],
-                    "width": bbox['width'],
-                    "height": bbox['height']
-                })
-                
                 x, y, w, h = bbox['x'], bbox['y'], bbox['width'], bbox['height']
                 cropped = img.crop((x, y, x + w, y + h))
-                filename = f"{image_name}_bbox_{bbox['id']}.png"
-                filepath = os.path.join(folder, filename)
-                cropped.save(filepath)
-                total_bboxes += 1
+                
+                # Apply augmentation if enabled
+                if apply_augmentation:
+                    # Create a simple bbox for the cropped image (covers entire cropped area)
+                    cropped_bbox = {
+                        'id': bbox['id'],
+                        'x': 0,
+                        'y': 0,
+                        'width': w,
+                        'height': h,
+                        'class': bbox.get('class', 'Class 1'),
+                        'class_color': bbox.get('class_color', '#00ff00')
+                    }
+                    
+                    augmented_images = self.app.augmentor.apply_augmentations(cropped, cropped_bbox)
+                    for aug_img, aug_name, aug_bbox in augmented_images:
+                        filename = f"{image_name}_bbox_{bbox['id']}_{aug_name}.png"
+                        filepath = os.path.join(folder, filename)
+                        aug_img.save(filepath)
+                        
+                        # Add augmented bbox to JSON with updated coordinates
+                        if aug_bbox:
+                            json_data["bboxes"].append({
+                                "id": f"{bbox['id']}_{aug_name}",
+                                "x": aug_bbox['x'],
+                                "y": aug_bbox['y'],
+                                "width": aug_bbox['width'],
+                                "height": aug_bbox['height'],
+                                "class": aug_bbox.get('class', 'Class 1'),
+                                "class_color": aug_bbox.get('class_color', '#00ff00'),
+                                "augmentation": aug_name,
+                                "original_id": bbox['id']
+                            })
+                        
+                        total_bboxes += 1
+                else:
+                    # Original bbox without augmentation
+                    json_data["bboxes"].append({
+                        "id": bbox['id'],
+                        "x": bbox['x'],
+                        "y": bbox['y'],
+                        "width": bbox['width'],
+                        "height": bbox['height'],
+                        "class": bbox.get('class', 'Class 1'),
+                        "class_color": bbox.get('class_color', '#00ff00')
+                    })
+                    
+                    filename = f"{image_name}_bbox_{bbox['id']}.png"
+                    filepath = os.path.join(folder, filename)
+                    cropped.save(filepath)
+                    total_bboxes += 1
             
             # Export polygons
             for polygon in polygons:
@@ -182,7 +238,9 @@ class ShapeManager:
                 
                 json_data["polygons"].append({
                     "id": polygon['id'],
-                    "points": points
+                    "points": points,
+                    "class": polygon.get('class', 'Class 1'),
+                    "class_color": polygon.get('class_color', '#00ff00')
                 })
                 
                 # Find bounding box of polygon
@@ -219,18 +277,45 @@ class ShapeManager:
                 output.save(filepath)
                 total_polygons += 1
             
-            # Save JSON file for this image
-            json_filename = f"{image_name}_annotations.json"
-            json_filepath = os.path.join(folder, json_filename)
-            with open(json_filepath, 'w') as f:
-                json.dump(json_data, f, indent=2)
+            # Store image data for format exporters
+            images_data[image_path] = {
+                'image_width': img.width,
+                'image_height': img.height,
+                'bboxes': bboxes,
+                'polygons': polygons
+            }
+            
+            # Save individual JSON file for this image (for JSON format)
+            if export_format == 'JSON':
+                json_filename = f"{image_name}_annotations.json"
+                json_filepath = os.path.join(folder, json_filename)
+                with open(json_filepath, 'w') as f:
+                    json.dump(json_data, f, indent=2)
+        
+        # Export in selected format
+        format_output = None
+        if export_format == 'COCO':
+            format_output = self.app.export_formatter.export_coco(images_data, folder)
+            format_msg = f"COCO format: {format_output}"
+        elif export_format == 'VOC':
+            format_output = self.app.export_formatter.export_voc(images_data, folder)
+            format_msg = f"VOC format: {format_output}"
+        elif export_format == 'YOLO':
+            # Get unique class names
+            class_names = list(set([cls['name'] for cls in self.app.classes]))
+            format_output = self.app.export_formatter.export_yolo(images_data, folder, class_names)
+            format_msg = f"YOLO format: {format_output}"
+        else:
+            format_msg = "JSON format (individual files)"
         
         messagebox.showinfo("Save Complete", 
                           f"Saved annotations from {total_images_with_annotations} image(s):\n"
                           f"- {total_bboxes} bboxes\n"
                           f"- {total_polygons} polygons\n\n"
+                          f"Format: {export_format}\n"
+                          f"{format_msg}\n\n"
                           f"Location: {folder}")
-        self.app.update_status(f"Saved {total_bboxes} bboxes and {total_polygons} polygons from {total_images_with_annotations} images")
+        self.app.update_status(f"Saved {total_bboxes} bboxes and {total_polygons} polygons in {export_format} format")
     
     def toggle_custom_select(self):
         """Toggle polygon selection mode"""
@@ -241,7 +326,7 @@ class ShapeManager:
             self.app.polygon_points = []
             self.app.update_status("BBox mode enabled | Click to place bboxes")
             self.app.canvas.config(cursor="crosshair")
-            self.app.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
     
     def complete_polygon(self):
         """Complete and save the current polygon"""
@@ -250,13 +335,19 @@ class ShapeManager:
             return
         
         self.app.polygon_counter += 1
+        
+        # Get current class
+        current_class = self.app.classes[self.app.current_class_index]
+        
         polygon = {
             'id': self.app.polygon_counter,
-            'points': self.app.polygon_points.copy()
+            'points': self.app.polygon_points.copy(),
+            'class': current_class['name'],
+            'class_color': current_class['color']
         }
         self.app.polygons.append(polygon)
         
         # Clear current points
         self.app.polygon_points = []
-        self.app.display_image_on_canvas()
+        self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
         self.app.update_status(f"Polygon #{self.app.polygon_counter} created | Total: {len(self.app.polygons)} polygons")

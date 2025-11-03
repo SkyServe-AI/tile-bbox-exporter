@@ -47,7 +47,7 @@ class MouseHandler:
         # Polygon mode
         if self.app.custom_select_mode.get():
             self.app.polygon_points.append((image_x, image_y))
-            self.app.canvas_handler.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"Point {len(self.app.polygon_points)} added | Right-click to complete polygon")
             return
         
@@ -58,14 +58,14 @@ class MouseHandler:
         if clicked_bbox:
             self.app.selected_bbox = clicked_bbox
             self.app.selected_polygon = None
-            self.app.canvas_handler.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"Selected bbox #{clicked_bbox['id']} | Size: {clicked_bbox['width']}x{clicked_bbox['height']}")
             return
         
         if clicked_polygon:
             self.app.selected_polygon = clicked_polygon
             self.app.selected_bbox = None
-            self.app.canvas_handler.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
             self.app.update_status(f"Selected polygon #{clicked_polygon['id']}")
             return
         
@@ -74,6 +74,9 @@ class MouseHandler:
         half_width = self.app.bbox_width // 2
         half_height = self.app.bbox_height // 2
         
+        # Get current class
+        current_class = self.app.classes[self.app.current_class_index]
+        
         bbox = {
             'id': self.app.bbox_counter,
             'x': max(0, image_x - half_width),
@@ -81,7 +84,9 @@ class MouseHandler:
             'width': self.app.bbox_width,
             'height': self.app.bbox_height,
             'rect_id': None,
-            'text_id': None
+            'text_id': None,
+            'class': current_class['name'],
+            'class_color': current_class['color']
         }
         
         # Ensure bbox stays within image bounds
@@ -92,7 +97,7 @@ class MouseHandler:
         
         self.app.bboxes.append(bbox)
         self.app.selected_bbox = bbox
-        self.app.canvas_handler.display_image_on_canvas()
+        self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
         self.app.update_status(f"BBox #{bbox['id']} created at ({bbox['x']}, {bbox['y']}) | Total: {len(self.app.bboxes)} bboxes")
     
     def on_right_click(self, event):
@@ -114,7 +119,7 @@ class MouseHandler:
         hovered = self._get_bbox_at_position(image_x, image_y)
         if hovered != self.app.hovered_bbox:
             self.app.hovered_bbox = hovered
-            self.app.canvas_handler.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
     
     def on_drag(self, event):
         """Handle dragging for bbox resize"""
@@ -167,7 +172,7 @@ class MouseHandler:
             
             self.app.drag_start_x = image_x
             self.app.drag_start_y = image_y
-            self.app.canvas_handler.display_image_on_canvas()
+            self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
     
     def on_release(self, event):
         """Handle mouse button release"""
@@ -178,7 +183,7 @@ class MouseHandler:
         """Handle double click - deselect"""
         self.app.selected_bbox = None
         self.app.selected_polygon = None
-        self.app.canvas_handler.display_image_on_canvas()
+        self.app.canvas_handler.display_image_on_canvas(preserve_view=True)
         self.app.update_status("Deselected all shapes")
     
     def _get_bbox_at_position(self, x, y):
