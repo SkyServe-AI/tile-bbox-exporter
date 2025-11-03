@@ -67,6 +67,16 @@ class UIComponents:
                                      borderwidth=0)
         custom_check.pack(side=tk.LEFT, padx=12)
         
+        # Export format selector
+        tk.Label(left_section, text="Export:", bg="#2d2d2d", fg="white", 
+                font=('Segoe UI', self.app.base_font_size)).pack(side=tk.LEFT, padx=(15, 3))
+        
+        format_dropdown = ttk.Combobox(left_section, textvariable=self.app.export_format,
+                                      values=['JSON', 'COCO', 'VOC', 'YOLO'],
+                                      state='readonly', width=8,
+                                      font=('Segoe UI', self.app.base_font_size))
+        format_dropdown.pack(side=tk.LEFT, padx=2)
+        
     def _create_zoom_controls(self, parent):
         """Create zoom control buttons"""
         zoom_section = tk.Frame(parent, bg="#2d2d2d")
@@ -120,6 +130,15 @@ class UIComponents:
                              command=self.app.clear_all_shapes, **clear_style)
         clear_btn.pack(side=tk.LEFT, padx=3)
         
+        # Augmentation button
+        aug_style = btn_style.copy()
+        aug_style['bg'] = '#8764b8'
+        aug_style['activebackground'] = '#744da9'
+        
+        aug_btn = tk.Button(right_section, text="🎨 Augment", 
+                           command=self.app.open_augmentation_settings, **aug_style)
+        aug_btn.pack(side=tk.LEFT, padx=3)
+        
         # Save button
         export_style = btn_style.copy()
         export_style['bg'] = '#107c10'
@@ -130,12 +149,41 @@ class UIComponents:
         export_btn.pack(side=tk.LEFT, padx=3)
         
     def _create_bbox_controls(self, parent):
-        """Create bbox size control inputs"""
+        """Create bbox size control inputs and class selector"""
         middle_section = tk.Frame(parent, bg="#2d2d2d")
         middle_section.pack(side=tk.LEFT, padx=10, pady=0)
         
+        # Class selector
+        tk.Label(middle_section, text="Class:", bg="#2d2d2d", fg="white", 
+                font=('Segoe UI', self.app.base_font_size, 'bold')).pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.app.class_var = tk.StringVar(value=self.app.classes[0]['name'])
+        class_dropdown = ttk.Combobox(middle_section, textvariable=self.app.class_var, 
+                                     values=[c['name'] for c in self.app.classes],
+                                     state='readonly', width=12,
+                                     font=('Segoe UI', self.app.base_font_size))
+        class_dropdown.pack(side=tk.LEFT, padx=2)
+        class_dropdown.bind('<<ComboboxSelected>>', self._on_class_selected)
+        
+        # Class color indicator
+        self.app.class_color_label = tk.Label(middle_section, text="●", bg="#2d2d2d", 
+                                             fg=self.app.classes[0]['color'],
+                                             font=('Segoe UI', 16, 'bold'))
+        self.app.class_color_label.pack(side=tk.LEFT, padx=2)
+        
+        # Manage classes button
+        manage_btn_style = self._get_button_style()
+        manage_btn_style['bg'] = '#505050'
+        manage_btn_style['activebackground'] = '#606060'
+        manage_classes_btn = tk.Button(middle_section, text="⚙️", 
+                                      command=self.app.manage_classes, **manage_btn_style)
+        manage_classes_btn.pack(side=tk.LEFT, padx=(2, 15))
+        
+        # Separator
+        tk.Frame(middle_section, width=2, bg="#505050").pack(side=tk.LEFT, fill=tk.Y, padx=10)
+        
         tk.Label(middle_section, text="BBox Size:", bg="#2d2d2d", fg="white", 
-                font=('Segoe UI', self.app.base_font_size)).pack(side=tk.LEFT, padx=3)
+                font=('Segoe UI', self.app.base_font_size)).pack(side=tk.LEFT, padx=(0, 3))
         
         # Width input
         tk.Label(middle_section, text="Width:", bg="#2d2d2d", fg="#b8b8b8", 
@@ -170,6 +218,15 @@ class UIComponents:
         apply_size_btn = tk.Button(middle_section, text="✓ Apply Size", 
                                    command=self.app.apply_size_to_selected, **apply_style)
         apply_size_btn.pack(side=tk.LEFT, padx=10)
+    
+    def _on_class_selected(self, event=None):
+        """Handle class selection change"""
+        selected_class_name = self.app.class_var.get()
+        for i, cls in enumerate(self.app.classes):
+            if cls['name'] == selected_class_name:
+                self.app.current_class_index = i
+                self.app.class_color_label.config(fg=cls['color'])
+                break
         
     def _setup_status_bar(self):
         """Setup the status bar at the bottom"""

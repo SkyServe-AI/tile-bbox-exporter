@@ -11,10 +11,15 @@ class CanvasHandler:
     def __init__(self, app):
         self.app = app
         
-    def display_image_on_canvas(self):
+    def display_image_on_canvas(self, preserve_view=False):
         """Display image on canvas with current zoom level"""
         if not self.app.image:
             return
+        
+        # Save current scroll position if preserving view
+        if preserve_view:
+            old_xview = self.app.canvas.xview()
+            old_yview = self.app.canvas.yview()
         
         # Calculate zoomed dimensions
         zoomed_width = int(self.app.image.width * self.app.zoom_level)
@@ -47,9 +52,15 @@ class CanvasHandler:
         scroll_height = max(zoomed_height + 2 * y_offset, canvas_height)
         self.app.canvas.config(scrollregion=(0, 0, scroll_width, scroll_height))
         
-        # Center the view
-        self.app.canvas.xview_moveto((x_offset - 10) / scroll_width if scroll_width > canvas_width else 0)
-        self.app.canvas.yview_moveto((y_offset - 10) / scroll_height if scroll_height > canvas_height else 0)
+        # Restore or center the view
+        if preserve_view:
+            # Restore previous scroll position
+            self.app.canvas.xview_moveto(old_xview[0])
+            self.app.canvas.yview_moveto(old_yview[0])
+        else:
+            # Center the view
+            self.app.canvas.xview_moveto((x_offset - 10) / scroll_width if scroll_width > canvas_width else 0)
+            self.app.canvas.yview_moveto((y_offset - 10) / scroll_height if scroll_height > canvas_height else 0)
 
         # Update status with image info
         if len(self.app.images) > 1:
@@ -96,16 +107,20 @@ class CanvasHandler:
                     canvas_points.extend([canvas_x, canvas_y])
                 
                 is_selected = self.app.selected_polygon and self.app.selected_polygon['id'] == polygon['id']
-                outline_color = "#ffcc00" if is_selected else "#00ffff"
-                text_color = "#ffcc00" if is_selected else "#00ffff"
+                
+                # Use class color or default
+                class_color = polygon.get('class_color', '#00ffff')
+                outline_color = "#ffcc00" if is_selected else class_color
+                text_color = "#ffcc00" if is_selected else class_color
                 line_width = 3 if is_selected else 2
                 
                 # Draw polygon outline
                 self.app.canvas.create_polygon(canvas_points, outline=outline_color, fill="", width=line_width, tags=f"polygon_{polygon['id']}")
                 
-                # Draw label
+                # Draw label with class name
                 if canvas_points:
-                    label_text = f"P#{polygon['id']}" + (" [SELECTED]" if is_selected else "")
+                    class_name = polygon.get('class', 'Class 1')
+                    label_text = f"P#{polygon['id']} [{class_name}]" + (" ✓" if is_selected else "")
                     self.app.canvas.create_text(canvas_points[0] + 5, canvas_points[1] + 5, 
                                           text=label_text, fill=text_color, 
                                           font=('Segoe UI', self.app.base_font_size, 'bold'), anchor='nw', tags=f"polygon_{polygon['id']}")
@@ -120,18 +135,21 @@ class CanvasHandler:
             is_selected = self.app.selected_bbox and self.app.selected_bbox['id'] == bbox['id']
             is_hovered = self.app.hovered_bbox and self.app.hovered_bbox['id'] == bbox['id']
             
-            outline_color = "#ffcc00" if is_selected else ("#00ff00" if is_hovered else "#ff0000")
-            text_color = "#ffcc00" if is_selected else "#ff0000"
+            # Use class color or default
+            class_color = bbox.get('class_color', '#ff0000')
+            outline_color = "#ffcc00" if is_selected else (self._brighten_color(class_color) if is_hovered else class_color)
+            text_color = "#ffcc00" if is_selected else class_color
             line_width = 3 if is_selected else (2 if is_hovered else 2)
             
             # Draw rectangle
             rect_id = self.app.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=line_width, 
                                                    fill="", tags=f"bbox_{bbox['id']}")
             
-            # Draw label
-            label_text = f"#{bbox['id']}"
+            # Draw label with class name
+            class_name = bbox.get('class', 'Class 1')
+            label_text = f"#{bbox['id']} [{class_name}]"
             if is_selected:
-                label_text += " [SELECTED]"
+                label_text += " ✓"
             text_id = self.app.canvas.create_text(x1 + 5, y1 + 5, text=label_text, fill=text_color, 
                                              font=('Segoe UI', self.app.base_font_size, 'bold'), anchor='nw', tags=f"bbox_{bbox['id']}")
             
@@ -150,6 +168,24 @@ class CanvasHandler:
                                             fill="#ffcc00", outline="white", width=2, tags=f"handle_sw_{bbox['id']}")
                 self.app.canvas.create_rectangle(x2-handle_size//2, y2-handle_size//2, x2+handle_size//2, y2+handle_size//2, 
                                             fill="#ffcc00", outline="white", width=2, tags=f"handle_se_{bbox['id']}")
+    
+    def _brighten_color(self, hex_color):
+        """Brighten a hex color for hover effect"""
+        # Remove # if present
+        hex_color = hex_color.lstrip('#')
+        
+        # Convert to RGB
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        
+        # Brighten by adding 40 to each component (capped at 255)
+        r = min(255, r + 40)
+        g = min(255, g + 40)
+        b = min(255, b + 40)
+        
+        # Convert back to hex
+        return f"#{r:02x}{g:02x}{b:02x}"
     
     def zoom_in(self):
         """Zoom in by 20%"""
