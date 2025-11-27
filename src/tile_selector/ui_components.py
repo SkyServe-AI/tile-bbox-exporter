@@ -72,6 +72,14 @@ class UIComponents:
                              command=self.app.apply_tile_size, **btn_style)
         apply_btn.pack(side=tk.LEFT, padx=8)
         
+        # LULC Classify button
+        classify_style = btn_style.copy()
+        classify_style['bg'] = '#9C27B0'
+        classify_style['activebackground'] = '#BA68C8'
+        classify_btn = tk.Button(middle_section, text="🔍 Classify LULC", 
+                                command=self.app.classify_tiles_lulc, **classify_style)
+        classify_btn.pack(side=tk.LEFT, padx=8)
+        
     def _create_zoom_controls(self, parent):
         """Create zoom control buttons"""
         zoom_section = tk.Frame(parent, bg="#2d2d2d")
@@ -99,6 +107,18 @@ class UIComponents:
         zoom_reset_btn = tk.Button(zoom_section, text="⟲", 
                                    command=self.app.zoom_reset, **zoom_btn_style)
         zoom_reset_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Hand tool button
+        hand_tool_style = zoom_btn_style.copy()
+        self.app.hand_tool_btn = tk.Button(zoom_section, text="✋", 
+                                           command=self.app.toggle_hand_tool, **hand_tool_style)
+        self.app.hand_tool_btn.pack(side=tk.LEFT, padx=8)
+        
+        # Overlay toggle button
+        overlay_style = zoom_btn_style.copy()
+        self.app.overlay_toggle_btn = tk.Button(zoom_section, text="👁", 
+                                                command=self.app.toggle_overlay, **overlay_style)
+        self.app.overlay_toggle_btn.pack(side=tk.LEFT, padx=2)
         
     def _create_export_buttons(self, parent):
         """Create export buttons"""
@@ -200,6 +220,9 @@ class UIComponents:
         list_scroll.config(command=self.app.image_listbox.yview)
         self.app.image_listbox.bind('<<ListboxSelect>>', self.app.on_image_select)
         
+        # LULC Category Legend (initially hidden)
+        self._setup_category_legend()
+        
     def _setup_canvas(self, parent):
         """Setup canvas for tile display"""
         canvas_frame = tk.Frame(parent, bg="#1e1e1e")
@@ -240,6 +263,50 @@ class UIComponents:
         
         self.app.canvas.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
         
+    def _setup_category_legend(self):
+        """Setup LULC category legend panel"""
+        from .lulc_classifier import LULCClassifier
+        
+        legend_frame = tk.Frame(self.app.side_panel, bg="#2d2d2d")
+        self.app.legend_frame = legend_frame
+        
+        # Header
+        legend_header = tk.Label(legend_frame, text="LULC Categories", bg="#2d2d2d", fg="white", 
+                                font=('Segoe UI', 10, 'bold'), pady=8)
+        legend_header.pack(side=tk.TOP, fill=tk.X)
+        
+        # Scrollable legend
+        legend_canvas = tk.Canvas(legend_frame, bg="#2d2d2d", highlightthickness=0, height=200)
+        legend_scrollbar = tk.Scrollbar(legend_frame, orient=tk.VERTICAL, command=legend_canvas.yview)
+        legend_inner = tk.Frame(legend_canvas, bg="#2d2d2d")
+        
+        legend_inner.bind("<Configure>", lambda e: legend_canvas.configure(scrollregion=legend_canvas.bbox("all")))
+        legend_canvas.create_window((0, 0), window=legend_inner, anchor="nw")
+        legend_canvas.configure(yscrollcommand=legend_scrollbar.set)
+        
+        legend_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        legend_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Create category items
+        self.app.category_counts = {}
+        for category in LULCClassifier.CATEGORIES:
+            color = LULCClassifier.CATEGORY_COLORS[category]
+            
+            item_frame = tk.Frame(legend_inner, bg="#2d2d2d")
+            item_frame.pack(side=tk.TOP, fill=tk.X, pady=2, padx=5)
+            
+            # Color box
+            color_box = tk.Label(item_frame, bg=color, width=2, relief=tk.RAISED, bd=1)
+            color_box.pack(side=tk.LEFT, padx=3)
+            
+            # Category name and count
+            label_text = f"{category}: 0"
+            count_label = tk.Label(item_frame, text=label_text, bg="#2d2d2d", fg="white",
+                                  font=('Segoe UI', 8), anchor='w')
+            count_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=3)
+            
+            self.app.category_counts[category] = count_label
+    
     def _get_button_style(self):
         """Get default button style"""
         return {

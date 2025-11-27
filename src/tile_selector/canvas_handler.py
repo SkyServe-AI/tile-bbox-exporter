@@ -42,7 +42,25 @@ class CanvasHandler:
             # Draw grid lines
             self.app.canvas.create_rectangle(x, y, x2, y2, outline="#555555", width=1, tags=f"tile_{i}")
             
-            # Highlight selected tiles
+            # If classified, show category color overlay (only if overlay is visible)
+            if (hasattr(self.app, 'tile_classifications') and self.app.tile_classifications and 
+                hasattr(self.app, 'overlay_visible') and self.app.overlay_visible):
+                if i < len(self.app.tile_classifications):
+                    category = self.app.tile_classifications[i]
+                    if category and category != 'Cloud':
+                        from .lulc_classifier import LULCClassifier
+                        color = LULCClassifier.CATEGORY_COLORS.get(category, '#FFFFFF')
+                        
+                        # Check if hand tool is active and this tile is being hovered
+                        if self.app.hand_tool_active and self.app.hover_tile_index == i:
+                            # Make overlay more transparent for hovered tile
+                            self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=2, tags=f"tile_{i}")
+                        else:
+                            # Draw colored overlay with normal transparency
+                            self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=3, tags=f"tile_{i}")
+                            self.app.canvas.create_rectangle(x, y, x2, y2, fill=color, stipple="gray25", tags=f"tile_{i}")
+            
+            # Highlight selected tiles (for manual adjustment)
             if i in self.app.selected_tiles:
                 self.app.canvas.create_rectangle(x, y, x2, y2, outline="#00ff00", width=3, tags=f"tile_{i}")
                 # Add semi-transparent overlay
@@ -56,7 +74,10 @@ class CanvasHandler:
         # Update scroll region
         self.app.canvas.config(scrollregion=(0, 0, zoomed_width, zoomed_height))
         
-        self.app.update_status(f"Image {self.app.current_image_index + 1}/{len(self.app.images)} | {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+        status_msg = f"Image {self.app.current_image_index + 1}/{len(self.app.images)} | {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}%"
+        if hasattr(self.app, 'tile_classifications') and self.app.tile_classifications:
+            status_msg += " | Classified"
+        self.app.update_status(status_msg)
 
     def zoom_in(self):
         """Zoom in by 20%"""
@@ -201,3 +222,83 @@ class CanvasHandler:
                 return i
         
         return None
+    
+    def on_right_click(self, event):
+        """Handle right-click to change tile category"""
+        if not hasattr(self.app, 'tile_classifications') or not self.app.tile_classifications:
+            return
+        
+        x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
+        tile_index = self._get_tile_at_position(x, y)
+        
+        if tile_index is not None:
+            self._show_category_menu(event, tile_index)
+    
+    def _show_category_menu(self, event, tile_index):
+        """Show category selection menu for a tile"""
+        import tkinter as tk
+        from .lulc_classifier import LULCClassifier
+        
+        menu = tk.Menu(self.app.root, tearoff=0, bg="#2d2d2d", fg="white",
+                      activebackground="#0e639c", activeforeground="white")
+        
+        current_category = self.app.tile_classifications[tile_index] if tile_index < len(self.app.tile_classifications) else None
+        
+        for category in LULCClassifier.CATEGORIES:
+            color = LULCClassifier.CATEGORY_COLORS[category]
+            label = f"● {category}"
+            if category == current_category:
+                label = f"✓ {label}"
+            
+            menu.add_command(
+                label=label,
+                command=lambda c=category, idx=tile_index: self._change_tile_category(idx, c),
+                foreground=color
+            )
+        
+        menu.add_separator()
+        menu.add_command(
+            label="Mark as Cloud",
+            command=lambda idx=tile_index: self._change_tile_category(idx, 'Cloud')
+        )
+        
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+    
+    def _change_tile_category(self, tile_index, new_category):
+        """Change the category of a specific tile"""
+        if tile_index < len(self.app.tile_classifications):
+            old_category = self.app.tile_classifications[tile_index]
+            self.app.tile_classifications[tile_index] = new_category
+            
+            # Update category counts
+            from collections import Counter
+            from .lulc_classifier import LULCClassifier
+            
+            counts = Counter(self.app.tile_classifications)
+            for category in LULCClassifier.CATEGORIES:
+                count = counts.get(category, 0)
+                if category in self.app.category_counts:
+                    self.app.category_counts[category].config(text=f"{category}: {count}")
+            
+            # Refresh display
+            self.app.display_grid()
+            self.app.update_status(f"Changed tile category from {old_category} to {new_category}")
+    
+    def on_mouse_motion(self, event):
+        """Handle mouse motion for hand tool hover effect"""
+        if not self.app.hand_tool_active:
+            return
+        
+        if not hasattr(self.app, 'tile_classifications') or not self.app.tile_classifications:
+            return
+        
+        x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
+        tile_index = self._get_tile_at_position(x, y)
+        
+        # Only redraw if hover changed
+        if tile_index != self.app.hover_tile_index:
+            self.app.hover_tile_index = tile_index
+            self.display_grid()
