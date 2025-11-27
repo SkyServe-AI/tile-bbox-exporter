@@ -36,6 +36,7 @@ class ImageHandler:
         if filepaths:
             self.app.images = []
             self.app.image_tile_selections = {}  # Clear previous selections
+            self._clear_classifications()  # Clear LULC classifications
             for filepath in filepaths:
                 try:
                     img = Image.open(filepath)
@@ -54,6 +55,7 @@ class ImageHandler:
         if folder:
             self.app.images = []
             self.app.image_tile_selections = {}  # Clear previous selections
+            self._clear_classifications()  # Clear LULC classifications
             for file in os.listdir(folder):
                 path = os.path.join(folder, file)
                 if os.path.isfile(path) and self.is_image_file(path):
@@ -97,6 +99,7 @@ class ImageHandler:
             self.app.current_image_index = selection[0]
             self.app.image_counter_label.config(
                 text=f"{self.app.current_image_index + 1} / {len(self.app.images)}")
+            self._clear_classifications()  # Clear classifications when switching images
             self.app.apply_tile_size()
     
     def prev_image(self):
@@ -114,6 +117,7 @@ class ImageHandler:
         self.app.image_listbox.see(self.app.current_image_index)
         self.app.image_counter_label.config(
             text=f"{self.app.current_image_index + 1} / {len(self.app.images)}")
+        self._clear_classifications()  # Clear classifications when switching images
         self.app.apply_tile_size()
     
     def next_image(self):
@@ -131,6 +135,7 @@ class ImageHandler:
         self.app.image_listbox.see(self.app.current_image_index)
         self.app.image_counter_label.config(
             text=f"{self.app.current_image_index + 1} / {len(self.app.images)}")
+        self._clear_classifications()  # Clear classifications when switching images
         self.app.apply_tile_size()
     
     def _setup_drag_drop(self):
@@ -206,6 +211,7 @@ class ImageHandler:
             self.app.update_status(f"Loaded {len(self.app.images)} image(s) via drag & drop")
             self.app.update_image_list()
             self.app.current_image_index = 0
+            self._clear_classifications()  # Clear LULC classifications
             self.app.apply_tile_size()
     
     def _parse_drop_data(self, data):
@@ -224,3 +230,16 @@ class ImageHandler:
         elif isinstance(data, (list, tuple)):
             return list(data)
         return []
+    
+    def _clear_classifications(self):
+        """Clear LULC classifications and hide legend"""
+        self.app.tile_classifications = []
+        if hasattr(self.app, 'legend_frame') and self.app.legend_frame:
+            if self.app.legend_frame.winfo_ismapped():
+                self.app.legend_frame.pack_forget()
+        # Reset category counts
+        if hasattr(self.app, 'category_counts'):
+            from .lulc_classifier import LULCClassifier
+            for category in LULCClassifier.CATEGORIES:
+                if category in self.app.category_counts:
+                    self.app.category_counts[category].config(text=f"{category}: 0")

@@ -8,6 +8,7 @@ from .ui_components import UIComponents
 from .image_handler import ImageHandler
 from .tile_manager import TileManager
 from .canvas_handler import CanvasHandler
+from .lulc_classifier import LULCClassifier
 
 
 class ImageTileSelector:
@@ -63,6 +64,19 @@ class ImageTileSelector:
         # Per-image tile selections storage
         self.image_tile_selections = {}  # {image_path: set of selected tile indices}
         
+        # LULC Classification
+        self.tile_classifications = []  # List of category names for each tile
+        self.lulc_classifier = None
+        self.legend_frame = None
+        self.category_counts = {}
+        
+        # Hand tool for transparent overlay
+        self.hand_tool_active = False
+        self.hover_tile_index = None
+        
+        # Overlay visibility toggle
+        self.overlay_visible = True
+        
         # Zoom settings
         self.zoom_level = 1.0
         self.min_zoom = 0.1
@@ -104,6 +118,8 @@ class ImageTileSelector:
         self.canvas.bind("<Button-1>", self.canvas_handler.on_canvas_click)
         self.canvas.bind("<B1-Motion>", self.canvas_handler.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.canvas_handler.on_canvas_release)
+        self.canvas.bind("<Button-3>", self.canvas_handler.on_right_click)  # Right-click for category menu
+        self.canvas.bind("<Motion>", self.canvas_handler.on_mouse_motion)  # Track mouse for hand tool
         self.canvas.bind("<MouseWheel>", self.canvas_handler.on_mouse_wheel)
         self.canvas.bind("<Control-MouseWheel>", self.canvas_handler.on_ctrl_mouse_wheel)
         self.canvas.bind("<Shift-MouseWheel>", self.canvas_handler.on_shift_mouse_wheel)
@@ -145,7 +161,10 @@ class ImageTileSelector:
     
     def export_tiles_wrapper(self):
         """Export tiles based on mode"""
-        if self.is_classification.get():
+        # Check if LULC classification is active
+        if hasattr(self, 'tile_classifications') and self.tile_classifications:
+            self.export_lulc_tiles()
+        elif self.is_classification.get():
             self.tile_manager.export_classification()
         else:
             self.tile_manager.export_tiles()
@@ -170,6 +189,135 @@ class ImageTileSelector:
         """Update status bar message"""
         if self.status_label:
             self.status_label.config(text=message)
+    
+    def toggle_hand_tool(self):
+        """Toggle hand tool mode for transparent overlay on hover"""
+        self.hand_tool_active = not self.hand_tool_active
+        if self.hand_tool_active:
+            self.canvas.config(cursor="hand2")
+            self.update_status("Hand Tool Active - Hover over tiles to see through overlay")
+        else:
+            self.canvas.config(cursor="")
+            self.hover_tile_index = None
+            self.display_grid()
+            self.update_status("Hand Tool Deactivated")
+    
+    def toggle_overlay(self):
+        """Toggle LULC overlay visibility"""
+        self.overlay_visible = not self.overlay_visible
+        
+        # Update button appearance
+        if hasattr(self, 'overlay_toggle_btn'):
+            if self.overlay_visible:
+                self.overlay_toggle_btn.config(relief=tk.RAISED, bg='#0e639c')
+                self.update_status("LULC Overlay Visible")
+            else:
+                self.overlay_toggle_btn.config(relief=tk.SUNKEN, bg='#555555')
+                self.update_status("LULC Overlay Hidden")
+        
+        # Refresh display
+        self.display_grid()
+    
+    def classify_tiles_lulc(self):
+        """Classify tiles using LULC classifier"""
+        if not self.tiles:
+            import tkinter.messagebox as messagebox
+            messagebox.showwarning("Warning", "No tiles to classify. Please load an image and apply tile size first.")
+            return
+        
+        # Initialize classifier if not already done
+        if not self.lulc_classifier:
+            self.lulc_classifier = LULCClassifier(
+                apply_color_correction=True,
+                filter_clouds=True,
+                cloud_threshold=0.7
+            )
+        
+        # Show progress
+        self.update_status("Classifying tiles...")
+        self.root.update()
+        
+        # Classify tiles
+        def progress_callback(current, total):
+            self.update_status(f"Classifying tiles... {current}/{total}")
+            self.root.update()
+        
+        self.tile_classifications = self.lulc_classifier.classify_tiles(self.tiles, progress_callback)
+        
+        # Update category counts
+        from collections import Counter
+        counts = Counter(self.tile_classifications)
+        
+        for category in LULCClassifier.CATEGORIES:
+            count = counts.get(category, 0)
+            if category in self.category_counts:
+                self.category_counts[category].config(text=f"{category}: {count}")
+        
+        # Show legend
+        if self.legend_frame and not self.legend_frame.winfo_ismapped():
+            self.legend_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
+        
+        # Refresh display
+        self.display_grid()
+        
+        self.update_status(f"Classification complete! {len(self.tiles)} tiles classified into {len(counts)} categories")
+    
+    def export_lulc_tiles(self):
+        """Export tiles to category directories"""
+        if not self.tile_classifications:
+            import tkinter.messagebox as messagebox
+            messagebox.showwarning("Warning", "Please classify tiles first using 'Classify LULC' button.")
+            return
+        
+        from tkinter import filedialog, messagebox
+        import os
+        
+        # Select base output folder
+        base_folder = filedialog.askdirectory(title="Select Base Output Folder for LULC Categories")
+        if not base_folder:
+            return
+        
+        # Create category directories
+        for category in LULCClassifier.CATEGORIES:
+            category_path = os.path.join(base_folder, category)
+            os.makedirs(category_path, exist_ok=True)
+        
+        # Export tiles
+        exported_counts = {cat: 0 for cat in LULCClassifier.CATEGORIES}
+        cloud_count = 0
+        
+        for i, (tile_info, category) in enumerate(zip(self.tiles, self.tile_classifications)):
+            if category == 'Cloud':
+                cloud_count += 1
+                continue
+            
+            if category in LULCClassifier.CATEGORIES:
+                # Save tile to category folder
+                category_path = os.path.join(base_folder, category)
+                filename = f"{tile_info['image_name']}_tile_r{tile_info['row']:03d}_c{tile_info['col']:03d}.png"
+                filepath = os.path.join(category_path, filename)
+                
+                try:
+                    tile_info['tile_img'].save(filepath)
+                    exported_counts[category] += 1
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to save {filename}: {e}")
+        
+        # Show summary
+        summary = "LULC Export Summary:\n\n"
+        for category in LULCClassifier.CATEGORIES:
+            count = exported_counts[category]
+            if count > 0:
+                summary += f"{category}: {count} tiles\n"
+        
+        if cloud_count > 0:
+            summary += f"\nCloud filtered: {cloud_count} tiles"
+        
+        summary += f"\n\nTotal exported: {sum(exported_counts.values())} tiles"
+        summary += f"\nOutput folder: {base_folder}"
+        
+        messagebox.showinfo("Export Complete", summary)
+        self.update_status(f"Exported {sum(exported_counts.values())} tiles to category folders")
 
 
 def main():

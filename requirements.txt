@@ -7,6 +7,11 @@ Pillow>=10.0.0
 # Drag and drop support (optional but recommended)
 tkinterdnd2>=0.3.0
 
+# LULC Classification dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+tqdm>=4.62.0
+
 # Note: tkinter is included with Python standard library
 # If tkinter is not available on your system:
 # - Windows: Included by default
