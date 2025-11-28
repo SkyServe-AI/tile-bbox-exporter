@@ -72,6 +72,19 @@ class UIComponents:
                              command=self.app.apply_tile_size, **btn_style)
         apply_btn.pack(side=tk.LEFT, padx=8)
         
+        # Preprocessing checkbox
+        self.app.preprocess_enabled = tk.BooleanVar(value=False)
+        preprocess_check = tk.Checkbutton(middle_section, text="Preprocess", 
+                                         variable=self.app.preprocess_enabled,
+                                         command=self.app.toggle_preprocessing,
+                                         bg="#2d2d2d", fg="white", 
+                                         selectcolor="#3c3c3c",
+                                         activebackground="#2d2d2d", 
+                                         activeforeground="white",
+                                         font=('Segoe UI', self.app.base_font_size))
+        preprocess_check.pack(side=tk.LEFT, padx=8)
+        self._create_tooltip(preprocess_check, "Apply CLAHE and color correction to image")
+        
         # LULC Classify button
         classify_style = btn_style.copy()
         classify_style['bg'] = '#9C27B0'
@@ -108,17 +121,19 @@ class UIComponents:
                                    command=self.app.zoom_reset, **zoom_btn_style)
         zoom_reset_btn.pack(side=tk.LEFT, padx=2)
         
-        # Hand tool button
+        # Hand tool button with tooltip
         hand_tool_style = zoom_btn_style.copy()
         self.app.hand_tool_btn = tk.Button(zoom_section, text="✋", 
                                            command=self.app.toggle_hand_tool, **hand_tool_style)
         self.app.hand_tool_btn.pack(side=tk.LEFT, padx=8)
+        self._create_tooltip(self.app.hand_tool_btn, "Hand Tool: Hover over tiles to see through overlay")
         
-        # Overlay toggle button
+        # Overlay toggle button with tooltip
         overlay_style = zoom_btn_style.copy()
         self.app.overlay_toggle_btn = tk.Button(zoom_section, text="👁", 
                                                 command=self.app.toggle_overlay, **overlay_style)
         self.app.overlay_toggle_btn.pack(side=tk.LEFT, padx=2)
+        self._create_tooltip(self.app.overlay_toggle_btn, "Toggle Overlay: Show/Hide LULC classification overlay")
         
     def _create_export_buttons(self, parent):
         """Create export buttons"""
@@ -275,8 +290,8 @@ class UIComponents:
                                 font=('Segoe UI', 10, 'bold'), pady=8)
         legend_header.pack(side=tk.TOP, fill=tk.X)
         
-        # Scrollable legend
-        legend_canvas = tk.Canvas(legend_frame, bg="#2d2d2d", highlightthickness=0, height=200)
+        # Scrollable legend with proper padding
+        legend_canvas = tk.Canvas(legend_frame, bg="#2d2d2d", highlightthickness=0, height=250)
         legend_scrollbar = tk.Scrollbar(legend_frame, orient=tk.VERTICAL, command=legend_canvas.yview)
         legend_inner = tk.Frame(legend_canvas, bg="#2d2d2d")
         
@@ -284,7 +299,7 @@ class UIComponents:
         legend_canvas.create_window((0, 0), window=legend_inner, anchor="nw")
         legend_canvas.configure(yscrollcommand=legend_scrollbar.set)
         
-        legend_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        legend_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=(0, 10))
         legend_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # Create category items
@@ -320,3 +335,22 @@ class UIComponents:
             'activebackground': '#1177bb',
             'activeforeground': 'white'
         }
+    
+    def _create_tooltip(self, widget, text):
+        """Create a tooltip for a widget"""
+        def on_enter(event):
+            tooltip = tk.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+            label = tk.Label(tooltip, text=text, background="#ffffe0", 
+                           relief=tk.SOLID, borderwidth=1, font=('Segoe UI', 8))
+            label.pack()
+            widget.tooltip = tooltip
+        
+        def on_leave(event):
+            if hasattr(widget, 'tooltip'):
+                widget.tooltip.destroy()
+                del widget.tooltip
+        
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)

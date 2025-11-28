@@ -31,8 +31,23 @@ class TileManager:
             return
         self.validate_tile_size()
         
-        # Get current image
-        current_image_path, current_image = self.app.images[self.app.current_image_index]
+        # Clear LULC classifications when tile size changes
+        self.app.tile_classifications = []
+        if hasattr(self.app, 'legend_frame') and self.app.legend_frame:
+            if self.app.legend_frame.winfo_ismapped():
+                self.app.legend_frame.pack_forget()
+        
+        # Get current image (use preprocessed if enabled, otherwise original)
+        current_image_path, original_image = self.app.images[self.app.current_image_index]
+        
+        # Use preprocessed image if preprocessing is enabled
+        if hasattr(self.app, 'preprocess_enabled') and self.app.preprocess_enabled and self.app.preprocess_enabled.get():
+            if self.app.preprocessed_image is not None:
+                current_image = self.app.preprocessed_image
+            else:
+                current_image = original_image
+        else:
+            current_image = original_image
         
         # Calculate padding needed
         img_width, img_height = current_image.size

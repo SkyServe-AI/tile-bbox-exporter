@@ -243,3 +243,8 @@ class ImageHandler:
             for category in LULCClassifier.CATEGORIES:
                 if category in self.app.category_counts:
                     self.app.category_counts[category].config(text=f"{category}: 0")
+        
+        # Clear preprocessed image
+        self.app.preprocessed_image = None
+        if hasattr(self.app, 'preprocess_enabled') and self.app.preprocess_enabled:
+            self.app.preprocess_enabled.set(False)

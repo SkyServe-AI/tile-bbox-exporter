@@ -60,8 +60,10 @@ class CanvasHandler:
                             self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=3, tags=f"tile_{i}")
                             self.app.canvas.create_rectangle(x, y, x2, y2, fill=color, stipple="gray25", tags=f"tile_{i}")
             
-            # Highlight selected tiles (for manual adjustment)
-            if i in self.app.selected_tiles:
+            # Highlight selected tiles (for manual adjustment or batch category assignment)
+            selected_set = self.app.selected_tiles_for_category if (hasattr(self.app, 'tile_classifications') and self.app.tile_classifications) else self.app.selected_tiles
+            
+            if i in selected_set:
                 self.app.canvas.create_rectangle(x, y, x2, y2, outline="#00ff00", width=3, tags=f"tile_{i}")
                 # Add semi-transparent overlay
                 self.app.canvas.create_rectangle(x, y, x2, y2, stipple="gray50", tags=f"tile_{i}")
@@ -165,18 +167,31 @@ class CanvasHandler:
         tile_index = self._get_tile_at_position(x, y)
         
         if tile_index is not None:
-            # Determine selection mode based on current state of clicked tile
-            if tile_index in self.app.selected_tiles:
-                self.app.selection_mode = 'remove'
-                self.app.selected_tiles.remove(tile_index)
-                self.app.tiles[tile_index]['selected'] = False
+            # If classifications exist, use selected_tiles_for_category for batch assignment
+            if hasattr(self.app, 'tile_classifications') and self.app.tile_classifications:
+                if tile_index in self.app.selected_tiles_for_category:
+                    self.app.selection_mode = 'remove'
+                    self.app.selected_tiles_for_category.remove(tile_index)
+                else:
+                    self.app.selection_mode = 'add'
+                    self.app.selected_tiles_for_category.add(tile_index)
             else:
-                self.app.selection_mode = 'add'
-                self.app.selected_tiles.add(tile_index)
-                self.app.tiles[tile_index]['selected'] = True
+                # Normal tile selection mode
+                if tile_index in self.app.selected_tiles:
+                    self.app.selection_mode = 'remove'
+                    self.app.selected_tiles.remove(tile_index)
+                    self.app.tiles[tile_index]['selected'] = False
+                else:
+                    self.app.selection_mode = 'add'
+                    self.app.selected_tiles.add(tile_index)
+                    self.app.tiles[tile_index]['selected'] = True
             
             self.display_grid()
-            self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+            
+            if hasattr(self.app, 'tile_classifications') and self.app.tile_classifications:
+                self.app.update_status(f"Selected {len(self.app.selected_tiles_for_category)} tiles for batch category assignment | Right-click to assign category")
+            else:
+                self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
     
     def on_canvas_drag(self, event):
         """Handle canvas drag to select multiple tiles"""
@@ -189,19 +204,32 @@ class CanvasHandler:
         tile_index = self._get_tile_at_position(x, y)
         
         if tile_index is not None:
-            # Apply selection mode to this tile
-            if self.app.selection_mode == 'add':
-                if tile_index not in self.app.selected_tiles:
-                    self.app.selected_tiles.add(tile_index)
-                    self.app.tiles[tile_index]['selected'] = True
-                    self.display_grid()
-                    self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
-            elif self.app.selection_mode == 'remove':
-                if tile_index in self.app.selected_tiles:
-                    self.app.selected_tiles.remove(tile_index)
-                    self.app.tiles[tile_index]['selected'] = False
-                    self.display_grid()
-                    self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+            # If classifications exist, use selected_tiles_for_category
+            if hasattr(self.app, 'tile_classifications') and self.app.tile_classifications:
+                if self.app.selection_mode == 'add':
+                    if tile_index not in self.app.selected_tiles_for_category:
+                        self.app.selected_tiles_for_category.add(tile_index)
+                        self.display_grid()
+                        self.app.update_status(f"Selected {len(self.app.selected_tiles_for_category)} tiles for batch category assignment")
+                elif self.app.selection_mode == 'remove':
+                    if tile_index in self.app.selected_tiles_for_category:
+                        self.app.selected_tiles_for_category.remove(tile_index)
+                        self.display_grid()
+                        self.app.update_status(f"Selected {len(self.app.selected_tiles_for_category)} tiles for batch category assignment")
+            else:
+                # Normal selection mode
+                if self.app.selection_mode == 'add':
+                    if tile_index not in self.app.selected_tiles:
+                        self.app.selected_tiles.add(tile_index)
+                        self.app.tiles[tile_index]['selected'] = True
+                        self.display_grid()
+                        self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
+                elif self.app.selection_mode == 'remove':
+                    if tile_index in self.app.selected_tiles:
+                        self.app.selected_tiles.remove(tile_index)
+                        self.app.tiles[tile_index]['selected'] = False
+                        self.display_grid()
+                        self.app.update_status(f"Displaying {len(self.app.tiles)} tiles | Zoom: {int(self.app.zoom_level * 100)}% | {len(self.app.selected_tiles)} selected")
     
     def on_canvas_release(self, event):
         """Handle mouse button release to end selection"""
@@ -228,11 +256,15 @@ class CanvasHandler:
         if not hasattr(self.app, 'tile_classifications') or not self.app.tile_classifications:
             return
         
-        x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
-        tile_index = self._get_tile_at_position(x, y)
-        
-        if tile_index is not None:
-            self._show_category_menu(event, tile_index)
+        # Check if there are selected tiles for batch assignment
+        if len(self.app.selected_tiles_for_category) > 0:
+            self._show_batch_category_menu(event)
+        else:
+            x, y = self.app.canvas.canvasx(event.x), self.app.canvas.canvasy(event.y)
+            tile_index = self._get_tile_at_position(x, y)
+            
+            if tile_index is not None:
+                self._show_category_menu(event, tile_index)
     
     def _show_category_menu(self, event, tile_index):
         """Show category selection menu for a tile"""
@@ -286,6 +318,66 @@ class CanvasHandler:
             # Refresh display
             self.app.display_grid()
             self.app.update_status(f"Changed tile category from {old_category} to {new_category}")
+    
+    def _show_batch_category_menu(self, event):
+        """Show category selection menu for batch assignment"""
+        import tkinter as tk
+        from .lulc_classifier import LULCClassifier
+        
+        menu = tk.Menu(self.app.root, tearoff=0, bg="#2d2d2d", fg="white",
+                      activebackground="#0e639c", activeforeground="white")
+        
+        menu.add_command(
+            label=f"Assign category to {len(self.app.selected_tiles_for_category)} selected tiles:",
+            state=tk.DISABLED
+        )
+        menu.add_separator()
+        
+        for category in LULCClassifier.CATEGORIES:
+            color = LULCClassifier.CATEGORY_COLORS[category]
+            label = f"● {category}"
+            
+            menu.add_command(
+                label=label,
+                command=lambda c=category: self._batch_assign_category(c),
+                foreground=color
+            )
+        
+        menu.add_separator()
+        menu.add_command(
+            label="Mark all as Cloud",
+            command=lambda: self._batch_assign_category('Cloud')
+        )
+        
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+    
+    def _batch_assign_category(self, new_category):
+        """Assign category to all selected tiles"""
+        from collections import Counter
+        from .lulc_classifier import LULCClassifier
+        
+        count = 0
+        for tile_index in self.app.selected_tiles_for_category:
+            if tile_index < len(self.app.tile_classifications):
+                self.app.tile_classifications[tile_index] = new_category
+                count += 1
+        
+        # Update category counts
+        counts = Counter(self.app.tile_classifications)
+        for category in LULCClassifier.CATEGORIES:
+            cat_count = counts.get(category, 0)
+            if category in self.app.category_counts:
+                self.app.category_counts[category].config(text=f"{category}: {cat_count}")
+        
+        # Clear selection
+        self.app.selected_tiles_for_category.clear()
+        
+        # Refresh display
+        self.app.display_grid()
+        self.app.update_status(f"Assigned {count} tiles to category: {new_category}")
     
     def on_mouse_motion(self, event):
         """Handle mouse motion for hand tool hover effect"""
