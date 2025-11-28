@@ -3,6 +3,8 @@ Tile Selector - Main Application
 Modular architecture with separated concerns
 """
 import tkinter as tk
+import cv2
+import numpy as np
 
 from .ui_components import UIComponents
 from .image_handler import ImageHandler
@@ -69,6 +71,7 @@ class ImageTileSelector:
         self.lulc_classifier = None
         self.legend_frame = None
         self.category_counts = {}
+        self.selected_tiles_for_category = set()  # Tiles selected for batch category assignment
         
         # Hand tool for transparent overlay
         self.hand_tool_active = False
@@ -76,6 +79,10 @@ class ImageTileSelector:
         
         # Overlay visibility toggle
         self.overlay_visible = True
+        
+        # Preprocessing toggle
+        self.preprocess_enabled = None  # Will be set by UI (BooleanVar)
+        self.preprocessed_image = None  # Store preprocessed version
         
         # Zoom settings
         self.zoom_level = 1.0
@@ -218,6 +225,22 @@ class ImageTileSelector:
         # Refresh display
         self.display_grid()
     
+    def toggle_preprocessing(self):
+        """Toggle preprocessing and update display"""
+        if self.preprocess_enabled.get():
+            # Preprocessing enabled - apply it
+            self.update_status("Applying preprocessing...")
+            self.root.update()
+            self._apply_preprocessing()
+            self.update_status("Preprocessing enabled - Displaying processed image")
+        else:
+            # Preprocessing disabled - use original
+            self.preprocessed_image = None
+            self.update_status("Preprocessing disabled - Displaying original image")
+        
+        # Regenerate tiles with current image (original or preprocessed)
+        self.apply_tile_size()
+    
     def classify_tiles_lulc(self):
         """Classify tiles using LULC classifier"""
         if not self.tiles:
@@ -236,6 +259,10 @@ class ImageTileSelector:
         # Show progress
         self.update_status("Classifying tiles...")
         self.root.update()
+        
+        # Save preprocessed image if color correction is enabled
+        if self.lulc_classifier.apply_color_correction and self.images:
+            self._save_preprocessed_image()
         
         # Classify tiles
         def progress_callback(current, total):
@@ -318,6 +345,71 @@ class ImageTileSelector:
         
         messagebox.showinfo("Export Complete", summary)
         self.update_status(f"Exported {sum(exported_counts.values())} tiles to category folders")
+    
+    def _apply_preprocessing(self):
+        """Apply preprocessing to current image"""
+        if not self.images or self.current_image_index >= len(self.images):
+            return
+        
+        # Initialize classifier if needed
+        if not self.lulc_classifier:
+            self.lulc_classifier = LULCClassifier(
+                apply_color_correction=True,
+                filter_clouds=True,
+                cloud_threshold=0.7
+            )
+        
+        current_image_path, current_image = self.images[self.current_image_index]
+        
+        # Convert PIL to numpy array (BGR)
+        img_array = cv2.cvtColor(np.array(current_image), cv2.COLOR_RGB2BGR)
+        
+        # Apply preprocessing
+        stats = self.lulc_classifier.analyze_image_bands(img_array)
+        corrected_img = self.lulc_classifier.apply_band_correction(img_array, stats)
+        
+        # Convert back to PIL RGB
+        corrected_rgb = cv2.cvtColor(corrected_img, cv2.COLOR_BGR2RGB)
+        from PIL import Image
+        self.preprocessed_image = Image.fromarray(corrected_rgb)
+    
+    def _save_preprocessed_image(self):
+        """Save preprocessed image with CLAHE and color correction"""
+        import os
+        from tkinter import filedialog
+        
+        if not self.images or self.current_image_index >= len(self.images):
+            return
+        
+        current_image_path, current_image = self.images[self.current_image_index]
+        image_name = os.path.splitext(os.path.basename(current_image_path))[0]
+        
+        # Convert PIL to numpy array (BGR)
+        img_array = cv2.cvtColor(np.array(current_image), cv2.COLOR_RGB2BGR)
+        
+        # Apply preprocessing
+        if not self.lulc_classifier:
+            self.lulc_classifier = LULCClassifier(
+                apply_color_correction=True,
+                filter_clouds=True,
+                cloud_threshold=0.7
+            )
+        
+        stats = self.lulc_classifier.analyze_image_bands(img_array)
+        corrected_img = self.lulc_classifier.apply_band_correction(img_array, stats)
+        
+        # Ask user where to save
+        default_name = f"{image_name}_preprocessed.tif"
+        save_path = filedialog.asksaveasfilename(
+            title="Save Preprocessed Image",
+            defaultextension=".tif",
+            initialfile=default_name,
+            filetypes=[("TIFF files", "*.tif"), ("All files", "*.*")]
+        )
+        
+        if save_path:
+            cv2.imwrite(save_path, corrected_img)
+            self.update_status(f"Saved preprocessed image to: {save_path}")
 
 
 def main():

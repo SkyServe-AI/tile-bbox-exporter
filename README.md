@@ -11,9 +11,15 @@ A professional desktop application for image annotation, tile selection, and obj
 - ✅ Interactive tile selection/deselection
 - 🖱️ Drag selection for multiple tiles (free-style painting)
 - 🎯 Classification mode for labeled exports
-- 💾 Export selected tiles as individual images
+- 🔍 **LULC Classification** with automated tile categorization
+- 🎨 **Image preprocessing** with CLAHE and color correction
+- 🌈 **Color-coded overlay** for 10 LULC categories
+- 🖐️ **Hand tool** for transparent overlay on hover
+- 👁️ **Toggle overlay** visibility
+- 📊 **Batch category assignment** for multiple tiles
+- 💾 Export tiles to category-specific directories
 - 🔍 Zoom and pan controls
-- 📊 Real-time selection statistics
+- 📊 Real-time selection and classification statistics
 
 ### BBox Selector & Polygon Annotator
 - 📁 Load single or multiple images
@@ -32,10 +38,10 @@ A professional desktop application for image annotation, tile selection, and obj
 
 ## Screenshots
 ### Image Tile Selector
-![Image Tile Selector](assets/TileSelector.png)
+![Image Tile Selector](assets/TileSelectorLULC.png)
 
 ### Image BBox Selector
-![Image BBox Selector](assets/BboxSelector.png)
+![Image BBox Selector](assets/BboxSelector1.png)
 
 ## Installation
 
@@ -84,25 +90,38 @@ python run_bbox_selector.py
 ### Image Tile Selector Workflow
 
 1. **Load Images**
-   - Click "📁 Load Images" to select one or more images
+   - Click "📁 Images" to select one or more images
+   - Or click "📂 Folder" to load all images from a directory
+   - Or drag & drop images/folders directly onto canvas
    - Images will be displayed with automatic tile grid overlay
 
 2. **Configure Tiles**
    - Adjust "Tile Size" (default: 100 pixels)
-   - Click "Generate Tiles" to recreate grid
+   - Click "✓ Apply" to regenerate grid
 
-3. **Select Tiles**
-   - **Single Click**: Click on tiles to select/deselect (green = selected)
-   - **Drag Selection**: Click and drag across tiles for free-style multi-selection
-     - Drag over unselected tiles to select them
-     - Drag over selected tiles to deselect them
+3. **Enable Preprocessing (Optional)**
+   - Check "Preprocess" to apply CLAHE and color correction
+   - Canvas will display the preprocessed image
+   - Uncheck to revert to original image
 
-4. **Export**
-   - **Standard Mode**: Click "💾 Export Selected Tiles"
-   - **Classification Mode**: Check "Classification Mode", enter class name, then export
+4. **Classify Tiles (LULC Mode)**
+   - Click "🔍 Classify LULC" to automatically categorize tiles
+   - 10 LULC categories: AnnualCrop, Forest, HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, SeaLake
+   - Tiles are color-coded by category
+   - Category legend shows distribution counts
+   - **Single tile adjustment**: Right-click any tile to change its category
+   - **Batch assignment**: 
+     - Click and drag to select multiple tiles (green checkmarks)
+     - Right-click to assign category to all selected tiles
+   - **Hand Tool (✋)**: Click to enable hover transparency mode
+   - **Toggle Overlay (👁)**: Click to hide/show all category overlays
+
+5. **Export**
+   - **Standard Mode**: Click "💾 Export" to save selected tiles
+   - **LULC Mode**: Exports tiles to category-specific folders
    - Choose output folder
-   - Files saved as: `{image_name}_tile_{row}_{col}.png`
-   - Classification mode creates: `{class_name}/{image_name}_tile_{row}_{col}.png`
+   - Files saved as: `{image_name}_tile_r{row}_c{col}.png`
+   - LULC mode creates: `{category}/{image_name}_tile_r{row}_c{col}.png`
 
 ### BBox Selector Workflow
 
@@ -169,6 +188,8 @@ python run_bbox_selector.py
 - `Ctrl + Mouse Wheel` - Zoom in/out
 - `Shift + Mouse Wheel` - Scroll horizontally
 - `Mouse Wheel` - Scroll vertically
+- `Right Click` - Change tile category (LULC mode)
+- `Middle Mouse Drag` - Pan canvas
 
 ## Project Structure
 
@@ -182,7 +203,8 @@ tile-bbox-exporter/
 │   │   ├── ui_components.py    # GUI setup and styling
 │   │   ├── image_handler.py    # Image loading and navigation
 │   │   ├── tile_manager.py     # Tile generation and export
-│   │   └── canvas_handler.py   # Canvas display and zoom
+│   │   ├── canvas_handler.py   # Canvas display and zoom
+│   │   └── lulc_classifier.py  # LULC classification engine
 │   └── bbox_selector/
 │       ├── __init__.py
 │       ├── app.py              # Main application entry point
@@ -195,6 +217,7 @@ tile-bbox-exporter/
 │       └── export_formats.py   # COCO/VOC/YOLO exporters
 ├── run_tile_selector.py        # Entry point for Tile Selector
 ├── run_bbox_selector.py        # Entry point for BBox Selector
+├── lulc_dataset.py             # LULC dataset generation script
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # This file
 ├── .gitignore                  # Git ignore rules
@@ -295,6 +318,9 @@ Class 3
 
 - **Pillow (PIL)** - Image processing
 - **tkinter** - GUI framework (included with Python)
+- **numpy** - Numerical operations for LULC classification
+- **opencv-python** - Image preprocessing (CLAHE, color correction)
+- **tkinterdnd2** - Drag & drop support (optional)
 
 See `requirements.txt` for specific versions.
 
@@ -347,6 +373,24 @@ Both applications follow a clean, modular architecture with separation of concer
 | `mouse_handler.py` | Mouse events and user interactions (BBox only) |
 
 ### Recent Improvements
+
+**v2.2.0 - LULC Integration:**
+- ✅ **LULC Classification System** with automated tile categorization
+- ✅ **10 LULC Categories**: AnnualCrop, Forest, HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, SeaLake
+- ✅ **Image Preprocessing**: CLAHE and color correction toggle
+- ✅ **Color-coded Overlay**: Visual category preview on canvas
+- ✅ **Interactive Tools**:
+  - Hand tool (✋) for transparent overlay on hover
+  - Eye toggle (👁) to hide/show overlays
+  - Tooltips on all interactive buttons
+- ✅ **Batch Category Assignment**: Select multiple tiles and assign category in one action
+- ✅ **Category Legend**: Real-time distribution counts
+- ✅ **Smart Workflow**:
+  - Classifications clear on new image load
+  - Classifications reset on tile size change
+  - Preprocessing state preserved per session
+- ✅ **Export to Categories**: Automatic folder creation per category
+- ✅ **Cloud Detection**: Filter cloud-covered tiles
 
 **v2.1.3:**
 - ✅ **Multi-class annotation system** with color-coded labels
@@ -420,7 +464,7 @@ For issues, questions, or contributions, please open an issue on the GitHub repo
 
 ---
 
-**Version:** 2.1.3  <br>
+**Version:** 2.2.0  <br>
 **Last Updated:** November 2025 <br>
 **Author:** Vijay Purohit <br>
 **Email:** <a href="mailto:vijay@skyserve.ai?">vijay@skyserve.ai</a> or <a href="mailto:vijaypurohit322@gmail.com?">vijaypurohit322@gmail.com</a> 
