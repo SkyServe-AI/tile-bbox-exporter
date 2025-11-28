@@ -12,30 +12,23 @@ class LULCClassifier:
     
     # LULC Categories
     CATEGORIES = [
-        'AnnualCrop',
-        'Forest',
-        'HerbaceousVegetation',
-        'Highway',
-        'Industrial',
-        'Pasture',
-        'PermanentCrop',
-        'Residential',
-        'River',
-        'SeaLake'
+        'AnnualCrop', 'Forest', 'HerbaceousVegetation', 'Highway', 'Industrial',
+        'Pasture', 'PermanentCrop', 'Residential', 'River', 'SeaLake', 'Others'
     ]
     
     # Color mapping for each category (RGB format for display)
     CATEGORY_COLORS = {
         'AnnualCrop': '#FFD700',        # Gold
         'Forest': '#228B22',            # Forest Green
-        'HerbaceousVegetation': '#90EE90',  # Light Green
+        'HerbaceousVegetation': '#9ACD32',  # Yellow Green
         'Highway': '#696969',           # Dim Gray
         'Industrial': '#8B4513',        # Saddle Brown
-        'Pasture': '#7CFC00',           # Lawn Green
-        'PermanentCrop': '#FF8C00',     # Dark Orange
-        'Residential': '#FF1493',       # Deep Pink
-        'River': '#1E90FF',             # Dodger Blue
-        'SeaLake': '#000080'            # Navy Blue
+        'Pasture': '#90EE90',          # Light Green
+        'PermanentCrop': '#FF8C00',    # Dark Orange
+        'Residential': '#FF69B4',      # Hot Pink
+        'River': '#4169E1',            # Royal Blue
+        'SeaLake': '#00CED1',          # Dark Turquoise
+        'Others': '#A0A0A0'            # Gray
     }
     
     def __init__(self, apply_color_correction=True, filter_clouds=True, cloud_threshold=0.7):
