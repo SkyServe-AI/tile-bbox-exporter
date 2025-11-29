@@ -53,8 +53,8 @@ A professional desktop application for image annotation, tile selection, and obj
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/vijaypurohit322/Tile-Selector-and-Exporter.git                      
-cd Tile-Selector-and-Exporter
+git clone https://github.com/SkyServe-AI/tile-bbox-exporter.git                      
+cd tile-bbox-exporter
 ```
 
 2. **Create a virtual environment (recommended)**
