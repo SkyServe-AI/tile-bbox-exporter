@@ -372,59 +372,6 @@ Both applications follow a clean, modular architecture with separation of concer
 | `canvas_handler.py` | Canvas rendering, zoom, and display |
 | `mouse_handler.py` | Mouse events and user interactions (BBox only) |
 
-### Recent Improvements
-
-**v2.2.0 - LULC Integration:**
-- ✅ **LULC Classification System** with automated tile categorization
-- ✅ **10 LULC Categories**: AnnualCrop, Forest, HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, SeaLake
-- ✅ **Image Preprocessing**: CLAHE and color correction toggle
-- ✅ **Color-coded Overlay**: Visual category preview on canvas
-- ✅ **Interactive Tools**:
-  - Hand tool (✋) for transparent overlay on hover
-  - Eye toggle (👁) to hide/show overlays
-  - Tooltips on all interactive buttons
-- ✅ **Batch Category Assignment**: Select multiple tiles and assign category in one action
-- ✅ **Category Legend**: Real-time distribution counts
-- ✅ **Smart Workflow**:
-  - Classifications clear on new image load
-  - Classifications reset on tile size change
-  - Preprocessing state preserved per session
-- ✅ **Export to Categories**: Automatic folder creation per category
-- ✅ **Cloud Detection**: Filter cloud-covered tiles
-
-**v2.1.3:**
-- ✅ **Multi-class annotation system** with color-coded labels
-- ✅ **Image augmentation** for dataset expansion (rotation, flip, brightness, contrast, blur, noise, saturation, sharpness)
-- ✅ **Export format support**: COCO, Pascal VOC, YOLO (in addition to JSON)
-- ✅ Augmentation settings dialog with live preview count
-- ✅ Preserve zoom/pan position during annotation
-- ✅ Updated bbox coordinates for augmented images
-- ✅ Class management dialog (add/edit/delete classes)
-- ✅ Mouse wheel scrolling in augmentation dialog
-
-**v2.0.3:**
-- ✅ Fixed per-image tile selection persistence
-- ✅ Each image now maintains independent tile selections
-- ✅ Export functions now process all images with their respective selections
-- ✅ Classification mode exports unselected tiles to `no_<folder>` directory
-- ✅ Added support for `.tif` file extension
-
-**v2.0.2:**
-- ✅ Added drag & drop support for images and folders (both tools)
-- ✅ Visual feedback when dragging files over canvas
-- ✅ Automatic file type detection and filtering
-- ✅ Graceful degradation if tkinterdnd2 not installed
-
-**v2.0.1:**
-- ✅ Added drag selection for tiles (free-style painting)
-- ✅ Smart selection mode (add/remove based on first tile)
-
-**v2.0.0 Refactor:**
-- ✅ Modularized monolithic codebase (1200+ lines → 6 modules)
-- ✅ Responsive UI for 13"+ displays
-- ✅ Fixed tile selection with position-based detection
-- ✅ Fixed zoom centering to maintain viewport
-- ✅ Improved code organization and maintainability
 
 ## Development
 
