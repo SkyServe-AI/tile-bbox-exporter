@@ -97,6 +97,7 @@ class ImageTileSelector:
         # Drag state
         self.drag_start_x = 0
         self.drag_start_y = 0
+        self.secondary_button_dragging = False
         
         # Tile selection drag state
         self.is_selecting = False
@@ -126,12 +127,14 @@ class ImageTileSelector:
         self.canvas.bind("<B1-Motion>", self.canvas_handler.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.canvas_handler.on_canvas_release)
         self.canvas.bind("<Button-3>", self.canvas_handler.on_right_click)  # Right-click for category menu
+        self.canvas.bind("<Control-Button-1>", self.canvas_handler.on_right_click)  # Control+click for mac trackpads
         self.canvas.bind("<Motion>", self.canvas_handler.on_mouse_motion)  # Track mouse for hand tool
         self.canvas.bind("<MouseWheel>", self.canvas_handler.on_mouse_wheel)
         self.canvas.bind("<Control-MouseWheel>", self.canvas_handler.on_ctrl_mouse_wheel)
         self.canvas.bind("<Shift-MouseWheel>", self.canvas_handler.on_shift_mouse_wheel)
         self.canvas.bind("<Button-2>", self.canvas_handler.on_drag_start)
         self.canvas.bind("<B2-Motion>", self.canvas_handler.on_drag_motion)
+        self.canvas.bind("<ButtonRelease-2>", self.canvas_handler.on_secondary_release)
     
     # Delegate methods to handlers
     def upload_images(self):

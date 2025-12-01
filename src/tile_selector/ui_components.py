@@ -12,12 +12,70 @@ class UIComponents:
     def __init__(self, root, app):
         self.root = root
         self.app = app
+        self.style = ttk.Style()
         
     def setup_gui(self):
         """Setup the main GUI layout"""
+        self._setup_styles()
         self._setup_control_panel()
         self._setup_status_bar()
         self._setup_main_content()
+
+    def _setup_styles(self):
+        """Configure ttk styles for consistent buttons and scrollbars"""
+        self.style.theme_use('clam')
+
+        font_bold = ('Segoe UI Semibold', self.app.button_font_size, 'bold')
+        font_icon = ('Segoe UI', self.app.button_font_size, 'bold')
+
+        self.style.configure("Sky.Primary.TButton",
+                             background="#0e639c",
+                             foreground="#ffffff",
+                             font=font_bold,
+                             borderwidth=0,
+                             padding=(12, 7))
+        self.style.map("Sky.Primary.TButton",
+                       background=[("active", "#1177bb"), ("disabled", "#1a1a1a")],
+                       foreground=[("disabled", "#888888")])
+
+        self.style.configure("Sky.Purple.TButton",
+                             background="#9C27B0",
+                             foreground="#ffffff",
+                             font=font_bold,
+                             borderwidth=0,
+                             padding=(12, 7))
+        self.style.map("Sky.Purple.TButton",
+                       background=[("active", "#BA68C8"), ("disabled", "#6a1b9a")],
+                       foreground=[("disabled", "#888888")])
+
+        self.style.configure("Sky.Green.TButton",
+                             background="#0d7d3a",
+                             foreground="#ffffff",
+                             font=font_bold,
+                             borderwidth=0,
+                             padding=(12, 7))
+        self.style.map("Sky.Green.TButton",
+                       background=[("active", "#0e9647"), ("disabled", "#135537")],
+                       foreground=[("disabled", "#888888")])
+
+        self.style.configure("Sky.Icon.TButton",
+                             background="#1f1f1f",
+                             foreground="#ffffff",
+                             font=font_icon,
+                             borderwidth=0,
+                             padding=(8, 7))
+        self.style.map("Sky.Icon.TButton",
+                       background=[("active", "#2b2b2b"), ("disabled", "#1f1f1f")])
+
+        self.style.configure("Sky.Nav.TButton",
+                             background="#0e639c",
+                             foreground="#ffffff",
+                             font=('Segoe UI', 9, 'bold'),
+                             borderwidth=0,
+                             padding=(6, 5))
+        self.style.map("Sky.Nav.TButton",
+                       background=[("active", "#1177bb"), ("disabled", "#1a1a1a")],
+                       foreground=[("disabled", "#888888")])
         
     def _setup_control_panel(self):
         """Setup the top control panel with buttons - Two rows for better space management"""
@@ -41,15 +99,14 @@ class UIComponents:
         """Create file operation buttons"""
         left_section = tk.Frame(parent, bg="#2d2d2d")
         left_section.pack(side=tk.LEFT, padx=15, pady=12)
-        
-        btn_style = self._get_button_style()
-        
-        upload_file_btn = tk.Button(left_section, text="📁 Images", 
-                                    command=self.app.upload_images, **btn_style)
+        btn_style = self._get_button_style('primary')
+
+        upload_file_btn = ttk.Button(left_section, text="📁 Images",
+                                     command=self.app.upload_images, **btn_style)
         upload_file_btn.pack(side=tk.LEFT, padx=3)
 
-        upload_folder_btn = tk.Button(left_section, text="📂 Folder", 
-                                      command=self.app.upload_folder, **btn_style)
+        upload_folder_btn = ttk.Button(left_section, text="📂 Folder", 
+                                       command=self.app.upload_folder, **btn_style)
         upload_folder_btn.pack(side=tk.LEFT, padx=3)
         
     def _create_tile_controls(self, parent):
@@ -67,9 +124,9 @@ class UIComponents:
         tile_size_entry.pack(side=tk.LEFT, padx=3)
         tile_size_entry.bind("<FocusOut>", self.app.validate_tile_size)
 
-        btn_style = self._get_button_style()
-        apply_btn = tk.Button(middle_section, text="✓ Apply", 
-                             command=self.app.apply_tile_size, **btn_style)
+        apply_btn_style = self._get_button_style('primary')
+        apply_btn = ttk.Button(middle_section, text="✓ Apply", 
+                               command=self.app.apply_tile_size, **apply_btn_style)
         apply_btn.pack(side=tk.LEFT, padx=8)
         
         # Preprocessing checkbox
@@ -86,11 +143,9 @@ class UIComponents:
         self._create_tooltip(preprocess_check, "Apply CLAHE and color correction to image")
         
         # LULC Classify button
-        classify_style = btn_style.copy()
-        classify_style['bg'] = '#9C27B0'
-        classify_style['activebackground'] = '#BA68C8'
-        classify_btn = tk.Button(middle_section, text="🔍 Classify LULC", 
-                                command=self.app.classify_tiles_lulc, **classify_style)
+        classify_style = self._get_button_style('purple')
+        classify_btn = ttk.Button(middle_section, text="🔍 Classify LULC", 
+                                  command=self.app.classify_tiles_lulc, **classify_style)
         classify_btn.pack(side=tk.LEFT, padx=8)
         
     def _create_zoom_controls(self, parent):
@@ -101,36 +156,34 @@ class UIComponents:
         tk.Label(zoom_section, text="Zoom:", bg="#2d2d2d", fg="white", 
                 font=('Segoe UI', self.app.base_font_size)).pack(side=tk.LEFT, padx=3)
         
-        zoom_btn_style = self._get_button_style()
-        zoom_btn_style['padx'] = 8
-        zoom_btn_style['pady'] = 5
+        zoom_btn_style = self._get_button_style('icon')
         
-        zoom_out_btn = tk.Button(zoom_section, text="➖", 
-                                command=self.app.zoom_out, **zoom_btn_style)
+        zoom_out_btn = ttk.Button(zoom_section, text="➖", 
+                                  command=self.app.zoom_out, **zoom_btn_style)
         zoom_out_btn.pack(side=tk.LEFT, padx=2)
         
         self.app.zoom_label = tk.Label(zoom_section, text="100%", bg="#2d2d2d", fg="white", 
                                        font=('Segoe UI', self.app.base_font_size, 'bold'), width=5)
         self.app.zoom_label.pack(side=tk.LEFT, padx=3)
         
-        zoom_in_btn = tk.Button(zoom_section, text="➕", 
-                               command=self.app.zoom_in, **zoom_btn_style)
+        zoom_in_btn = ttk.Button(zoom_section, text="➕", 
+                                 command=self.app.zoom_in, **zoom_btn_style)
         zoom_in_btn.pack(side=tk.LEFT, padx=2)
         
-        zoom_reset_btn = tk.Button(zoom_section, text="⟲", 
-                                   command=self.app.zoom_reset, **zoom_btn_style)
+        zoom_reset_btn = ttk.Button(zoom_section, text="⟲", 
+                                    command=self.app.zoom_reset, **zoom_btn_style)
         zoom_reset_btn.pack(side=tk.LEFT, padx=2)
         
         # Hand tool button with tooltip
-        hand_tool_style = zoom_btn_style.copy()
-        self.app.hand_tool_btn = tk.Button(zoom_section, text="✋", 
+        hand_tool_style = self._get_button_style('icon')
+        self.app.hand_tool_btn = ttk.Button(zoom_section, text="✋", 
                                            command=self.app.toggle_hand_tool, **hand_tool_style)
         self.app.hand_tool_btn.pack(side=tk.LEFT, padx=8)
         self._create_tooltip(self.app.hand_tool_btn, "Hand Tool: Hover over tiles to see through overlay")
         
         # Overlay toggle button with tooltip
-        overlay_style = zoom_btn_style.copy()
-        self.app.overlay_toggle_btn = tk.Button(zoom_section, text="👁", 
+        overlay_style = self._get_button_style('icon')
+        self.app.overlay_toggle_btn = ttk.Button(zoom_section, text="👁", 
                                                 command=self.app.toggle_overlay, **overlay_style)
         self.app.overlay_toggle_btn.pack(side=tk.LEFT, padx=2)
         self._create_tooltip(self.app.overlay_toggle_btn, "Toggle Overlay: Show/Hide LULC classification overlay")
@@ -152,13 +205,10 @@ class UIComponents:
                                              cursor='hand2')
         classification_check.pack(side=tk.LEFT, padx=8)
         
-        btn_style = self._get_button_style()
-        export_style = btn_style.copy()
-        export_style['bg'] = '#0d7d3a'
-        export_style['activebackground'] = '#0e9647'
+        export_style = self._get_button_style('green')
         
-        export_btn = tk.Button(right_section, text="💾 Export", 
-                              command=self.app.export_tiles_wrapper, **export_style)
+        export_btn = ttk.Button(right_section, text="💾 Export", 
+                               command=self.app.export_tiles_wrapper, **export_style)
         export_btn.pack(side=tk.LEFT, padx=3)
         
     def _setup_status_bar(self):
@@ -195,24 +245,14 @@ class UIComponents:
         nav_btn_frame = tk.Frame(self.app.side_panel, bg="#2d2d2d")
         nav_btn_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
         
-        nav_btn_style = {
-            'bg': '#0e639c',
-            'fg': 'white',
-            'font': ('Segoe UI', 9),
-            'relief': tk.FLAT,
-            'padx': 10,
-            'pady': 5,
-            'cursor': 'hand2',
-            'activebackground': '#1177bb',
-            'activeforeground': 'white'
-        }
+        nav_btn_style = self._get_button_style('nav')
         
-        self.app.prev_btn = tk.Button(nav_btn_frame, text="◄ Prev", 
-                                      command=self.app.prev_image, **nav_btn_style)
+        self.app.prev_btn = ttk.Button(nav_btn_frame, text="◄ Prev", 
+                                       command=self.app.prev_image, **nav_btn_style)
         self.app.prev_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
-        self.app.next_btn = tk.Button(nav_btn_frame, text="Next ►", 
-                                      command=self.app.next_image, **nav_btn_style)
+        self.app.next_btn = ttk.Button(nav_btn_frame, text="Next ►", 
+                                       command=self.app.next_image, **nav_btn_style)
         self.app.next_btn.pack(side=tk.RIGHT, padx=2, expand=True, fill=tk.X)
         
         # Image counter
@@ -251,22 +291,20 @@ class UIComponents:
         
     def _setup_scrollbars(self, parent):
         """Setup canvas scrollbars"""
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure("Vertical.TScrollbar", 
-                       background="#2d2d2d",
-                       troughcolor="#1e1e1e",
-                       bordercolor="#1e1e1e",
-                       arrowcolor="#aaaaaa",
-                       darkcolor="#2d2d2d",
-                       lightcolor="#2d2d2d")
-        style.configure("Horizontal.TScrollbar",
-                       background="#2d2d2d",
-                       troughcolor="#1e1e1e",
-                       bordercolor="#1e1e1e",
-                       arrowcolor="#aaaaaa",
-                       darkcolor="#2d2d2d",
-                       lightcolor="#2d2d2d")
+        self.style.configure("Vertical.TScrollbar", 
+                             background="#2d2d2d",
+                             troughcolor="#1e1e1e",
+                             bordercolor="#1e1e1e",
+                             arrowcolor="#aaaaaa",
+                             darkcolor="#2d2d2d",
+                             lightcolor="#2d2d2d")
+        self.style.configure("Horizontal.TScrollbar",
+                             background="#2d2d2d",
+                             troughcolor="#1e1e1e",
+                             bordercolor="#1e1e1e",
+                             arrowcolor="#aaaaaa",
+                             darkcolor="#2d2d2d",
+                             lightcolor="#2d2d2d")
         
         v_scroll = ttk.Scrollbar(parent, orient=tk.VERTICAL, 
                                 command=self.app.canvas.yview, style="Vertical.TScrollbar")
@@ -322,19 +360,17 @@ class UIComponents:
             
             self.app.category_counts[category] = count_label
     
-    def _get_button_style(self):
-        """Get default button style"""
-        return {
-            'bg': '#0e639c',
-            'fg': 'white',
-            'font': ('Segoe UI', self.app.button_font_size),
-            'relief': tk.FLAT,
-            'padx': 12,
-            'pady': 7,
-            'cursor': 'hand2',
-            'activebackground': '#1177bb',
-            'activeforeground': 'white'
+    def _get_button_style(self, variant='primary'):
+        """Return style metadata for ttk buttons"""
+        variants = {
+            'primary': {'style': 'Sky.Primary.TButton', 'cursor': 'hand2'},
+            'purple': {'style': 'Sky.Purple.TButton', 'cursor': 'hand2'},
+            'green': {'style': 'Sky.Green.TButton', 'cursor': 'hand2'},
+            'icon': {'style': 'Sky.Icon.TButton', 'cursor': 'hand2'},
+            'nav': {'style': 'Sky.Nav.TButton', 'cursor': 'hand2'}
         }
+        style = variants.get(variant, variants['primary'])
+        return style.copy()
     
     def _create_tooltip(self, widget, text):
         """Create a tooltip for a widget"""
