@@ -67,6 +67,26 @@ class UIComponents:
         self.style.map("Sky.Icon.TButton",
                        background=[("active", "#2b2b2b"), ("disabled", "#1f1f1f")])
 
+        self.style.configure("Sky.OverlayVisible.TButton",
+                             background="#0e639c",
+                             foreground="#ffffff",
+                             font=font_icon,
+                             borderwidth=0,
+                             padding=(8, 7))
+        self.style.map("Sky.OverlayVisible.TButton",
+                       background=[("active", "#1177bb"), ("disabled", "#1a1a1a")],
+                       foreground=[("disabled", "#888888")])
+
+        self.style.configure("Sky.OverlayHidden.TButton",
+                             background="#1f1f1f",
+                             foreground="#cccccc",
+                             font=font_icon,
+                             borderwidth=0,
+                             padding=(8, 7))
+        self.style.map("Sky.OverlayHidden.TButton",
+                       background=[("active", "#2b2b2b"), ("disabled", "#1f1f1f")],
+                       foreground=[("disabled", "#888888")])
+
         self.style.configure("Sky.Nav.TButton",
                              background="#0e639c",
                              foreground="#ffffff",
@@ -182,7 +202,7 @@ class UIComponents:
         self._create_tooltip(self.app.hand_tool_btn, "Hand Tool: Hover over tiles to see through overlay")
         
         # Overlay toggle button with tooltip
-        overlay_style = self._get_button_style('icon')
+        overlay_style = self._get_button_style('overlay_visible')
         self.app.overlay_toggle_btn = ttk.Button(zoom_section, text="👁", 
                                                 command=self.app.toggle_overlay, **overlay_style)
         self.app.overlay_toggle_btn.pack(side=tk.LEFT, padx=2)
@@ -367,6 +387,8 @@ class UIComponents:
             'purple': {'style': 'Sky.Purple.TButton', 'cursor': 'hand2'},
             'green': {'style': 'Sky.Green.TButton', 'cursor': 'hand2'},
             'icon': {'style': 'Sky.Icon.TButton', 'cursor': 'hand2'},
+            'overlay_visible': {'style': 'Sky.OverlayVisible.TButton', 'cursor': 'hand2'},
+            'overlay_hidden': {'style': 'Sky.OverlayHidden.TButton', 'cursor': 'hand2'},
             'nav': {'style': 'Sky.Nav.TButton', 'cursor': 'hand2'}
         }
         style = variants.get(variant, variants['primary'])

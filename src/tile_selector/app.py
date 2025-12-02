@@ -218,12 +218,10 @@ class ImageTileSelector:
         
         # Update button appearance
         if hasattr(self, 'overlay_toggle_btn'):
-            if self.overlay_visible:
-                self.overlay_toggle_btn.config(relief=tk.RAISED, bg='#0e639c')
-                self.update_status("LULC Overlay Visible")
-            else:
-                self.overlay_toggle_btn.config(relief=tk.SUNKEN, bg='#555555')
-                self.update_status("LULC Overlay Hidden")
+            style_name = "Sky.OverlayVisible.TButton" if self.overlay_visible else "Sky.OverlayHidden.TButton"
+            self.overlay_toggle_btn.configure(style=style_name)
+            visibility_msg = "LULC Overlay Visible" if self.overlay_visible else "LULC Overlay Hidden"
+            self.update_status(visibility_msg)
         
         # Refresh display
         self.display_grid()
