@@ -2,14 +2,15 @@
 Canvas Handler Module for Tile Selector
 Manages canvas display, zoom, and tile rendering
 """
-from PIL import ImageTk
+from PIL import Image, ImageTk
 
 
 class CanvasHandler:
     """Handles canvas display and interactions"""
-    
+
     def __init__(self, app):
         self.app = app
+        self.overlay_image_cache = {}
         
     def display_grid(self):
         """Display tile grid on canvas"""
@@ -51,14 +52,13 @@ class CanvasHandler:
                         from .lulc_classifier import LULCClassifier
                         color = LULCClassifier.CATEGORY_COLORS.get(category, '#FFFFFF')
                         
-                        # Check if hand tool is active and this tile is being hovered
                         if self.app.hand_tool_active and self.app.hover_tile_index == i:
-                            # Make overlay more transparent for hovered tile
                             self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=2, tags=f"tile_{i}")
                         else:
-                            # Draw colored overlay with normal transparency
-                            self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=3, tags=f"tile_{i}")
-                            self.app.canvas.create_rectangle(x, y, x2, y2, fill=color, stipple="gray25", tags=f"tile_{i}")
+                            overlay_image = self._get_overlay_image(color, tile_size_zoomed, alpha=70)
+                            self.app.canvas.create_image(x, y, anchor='nw', image=overlay_image, 
+                                                         tags=(f"overlay_{i}", f"tile_{i}"))
+                            self.app.canvas.create_rectangle(x, y, x2, y2, outline=color, width=2, tags=f"tile_{i}")
             
             # Highlight selected tiles (for manual adjustment or batch category assignment)
             selected_set = self.app.selected_tiles_for_category if (hasattr(self.app, 'tile_classifications') and self.app.tile_classifications) else self.app.selected_tiles
@@ -151,10 +151,19 @@ class CanvasHandler:
         self.app.canvas.scan_mark(event.x, event.y)
         self.app.drag_start_x = event.x
         self.app.drag_start_y = event.y
+        self.app.secondary_button_dragging = False
     
     def on_drag_motion(self, event):
         """Handle drag scrolling motion"""
         self.app.canvas.scan_dragto(event.x, event.y, gain=1)
+        self.app.secondary_button_dragging = True
+
+    def on_secondary_release(self, event):
+        """Show context menu on secondary button release if not dragging"""
+        if getattr(self.app, 'secondary_button_dragging', False):
+            self.app.secondary_button_dragging = False
+            return
+        self.on_right_click(event)
     
     def on_canvas_click(self, event):
         """Handle canvas click to start tile selection"""
@@ -378,6 +387,26 @@ class CanvasHandler:
         # Refresh display
         self.app.display_grid()
         self.app.update_status(f"Assigned {count} tiles to category: {new_category}")
+
+    def _get_overlay_image(self, color, size, alpha=70):
+        """Return a cached PhotoImage tinted with the category color"""
+        actual_size = max(size, 1)
+        key = (color, actual_size, alpha)
+        if key not in self.overlay_image_cache:
+            rgba = self._hex_to_rgba(color, alpha)
+            overlay = Image.new('RGBA', (actual_size, actual_size), rgba)
+            self.overlay_image_cache[key] = ImageTk.PhotoImage(overlay)
+        return self.overlay_image_cache[key]
+
+    def _hex_to_rgba(self, hex_color, alpha=70):
+        """Convert a hex color string to an RGBA tuple"""
+        hex_color = hex_color.lstrip('#')
+        if len(hex_color) == 3:
+            hex_color = ''.join(ch * 2 for ch in hex_color)
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return (r, g, b, alpha)
     
     def on_mouse_motion(self, event):
         """Handle mouse motion for hand tool hover effect"""

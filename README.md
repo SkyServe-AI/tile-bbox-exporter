@@ -190,6 +190,7 @@ python run_bbox_selector.py
 - `Mouse Wheel` - Scroll vertically
 - `Right Click` - Change tile category (LULC mode)
 - `Middle Mouse Drag` - Pan canvas
+  - On macOS trackpads use `Control + Click` or two-finger click (Control tap triggers Tk's right-click handler)
 
 ## Project Structure
 
@@ -341,6 +342,24 @@ sudo apt-get install python3-tk
 # Fedora
 sudo dnf install python3-tkinter
 ```
+
+### Issue: "No module named '_tkinter'"
+**Solution:** macOS Python must be linked against Tcl/Tk. Install the missing frameworks and recreate the virtual environment before reinstalling dependencies.
+```bash
+# Install the Tcl/Tk runtime (Homebrew example)
+brew install tcl-tk
+
+# Point Python to Homebrew's Tcl/Tk when it is rebuilt or installed
+# (the python.org installer already bundles Tcl/Tk, so reinstalling from python.org also works)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Confirm tkinter loads
+python3 -m tkinter
+```
+
+If you use `pyenv`/`asdf`, make sure the build picks up `tcl-tk` headers by exporting `CPPFLAGS`/`LDFLAGS` before compiling.
 
 ### Issue: Images not loading
 **Solution:** Ensure images are in supported formats (PNG, JPG, JPEG, TIFF)
