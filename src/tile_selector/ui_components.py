@@ -348,37 +348,82 @@ class UIComponents:
                                 font=('Segoe UI', 10, 'bold'), pady=8)
         legend_header.pack(side=tk.TOP, fill=tk.X)
         
-        # Scrollable legend with proper padding
-        legend_canvas = tk.Canvas(legend_frame, bg="#2d2d2d", highlightthickness=0, height=250)
-        legend_scrollbar = tk.Scrollbar(legend_frame, orient=tk.VERTICAL, command=legend_canvas.yview)
+        # Scrollable legend - fills all remaining vertical space
+        scroll_container = tk.Frame(legend_frame, bg="#2d2d2d")
+        scroll_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=0, pady=(0, 5))
+        
+        legend_canvas = tk.Canvas(scroll_container, bg="#2d2d2d", highlightthickness=0)
+        legend_scrollbar = tk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=legend_canvas.yview)
         legend_inner = tk.Frame(legend_canvas, bg="#2d2d2d")
         
         legend_inner.bind("<Configure>", lambda e: legend_canvas.configure(scrollregion=legend_canvas.bbox("all")))
-        legend_canvas.create_window((0, 0), window=legend_inner, anchor="nw")
+        self._legend_canvas_window = legend_canvas.create_window((0, 0), window=legend_inner, anchor="nw")
         legend_canvas.configure(yscrollcommand=legend_scrollbar.set)
         
-        legend_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=(0, 10))
+        # Constrain inner frame width to canvas width so entries don't clip
+        def _on_legend_canvas_configure(event):
+            legend_canvas.itemconfig(self._legend_canvas_window, width=event.width)
+        legend_canvas.bind("<Configure>", _on_legend_canvas_configure)
+        
         legend_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        legend_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Bind mousewheel scrolling to the legend canvas
+        def _on_legend_mousewheel(event):
+            legend_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        legend_canvas.bind("<MouseWheel>", _on_legend_mousewheel)
+        legend_inner.bind("<MouseWheel>", _on_legend_mousewheel)
+        
+        # Store reference so child widgets can also bind mousewheel
+        self._legend_mousewheel_handler = _on_legend_mousewheel
+        self._legend_canvas = legend_canvas
         
         # Create category items
         self.app.category_counts = {}
-        for category in LULCClassifier.CATEGORIES:
+        self.app.category_value_vars = {}
+        for idx, category in enumerate(LULCClassifier.CATEGORIES):
             color = LULCClassifier.CATEGORY_COLORS[category]
             
-            item_frame = tk.Frame(legend_inner, bg="#2d2d2d")
-            item_frame.pack(side=tk.TOP, fill=tk.X, pady=2, padx=5)
+            # Container for this category (holds two rows)
+            cat_container = tk.Frame(legend_inner, bg="#2d2d2d")
+            cat_container.pack(side=tk.TOP, fill=tk.X, pady=(3, 0), padx=5)
             
-            # Color box
-            color_box = tk.Label(item_frame, bg=color, width=2, relief=tk.RAISED, bd=1)
+            # Row 1: Color box + category name + count
+            row1 = tk.Frame(cat_container, bg="#2d2d2d")
+            row1.pack(side=tk.TOP, fill=tk.X)
+            
+            color_box = tk.Label(row1, bg=color, width=2, relief=tk.RAISED, bd=1)
             color_box.pack(side=tk.LEFT, padx=3)
             
-            # Category name and count
             label_text = f"{category}: 0"
-            count_label = tk.Label(item_frame, text=label_text, bg="#2d2d2d", fg="white",
+            count_label = tk.Label(row1, text=label_text, bg="#2d2d2d", fg="white",
                                   font=('Segoe UI', 8), anchor='w')
             count_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=3)
             
+            # Row 2: Mask value editor
+            row2 = tk.Frame(cat_container, bg="#2d2d2d")
+            row2.pack(side=tk.TOP, fill=tk.X, padx=(22, 0))
+            
+            val_label = tk.Label(row2, text="Mask Val:", bg="#2d2d2d", fg="#aaaaaa",
+                                font=('Segoe UI', 7))
+            val_label.pack(side=tk.LEFT, padx=(0, 2))
+            
+            value_var = tk.StringVar(value=str(idx))
+            value_entry = tk.Entry(row2, textvariable=value_var, width=4,
+                                   font=('Segoe UI', 8, 'bold'), relief=tk.FLAT,
+                                   bg="#3c3c3c", fg="#00ff00", insertbackground="#00ff00",
+                                   justify='center')
+            value_entry.pack(side=tk.LEFT, padx=2)
+            value_entry.bind("<FocusOut>", lambda e, cat=category, var=value_var: self.app.update_category_value(cat, var))
+            value_entry.bind("<Return>", lambda e, cat=category, var=value_var: self.app.update_category_value(cat, var))
+            self._create_tooltip(value_entry, f"Integer value for '{category}' in exported mask (0-255)")
+            
+            self.app.category_value_vars[category] = value_var
             self.app.category_counts[category] = count_label
+            
+            # Bind mousewheel to all child widgets so scrolling works everywhere
+            for widget in (cat_container, row1, color_box, count_label, row2, val_label, value_entry):
+                widget.bind("<MouseWheel>", self._legend_mousewheel_handler)
     
     def _get_button_style(self, variant='primary'):
         """Return style metadata for ttk buttons"""
